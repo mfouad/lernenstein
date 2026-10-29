@@ -1,0 +1,91 @@
+import * as Popover from '@radix-ui/react-popover';
+import * as Tabs from '@radix-ui/react-tabs';
+import * as ToggleGroup from '@radix-ui/react-toggle-group';
+import { Check, ChevronDown, ExternalLink, Moon, Music, Rows3, Sun, TextQuote } from 'lucide-react';
+import { useState } from 'react';
+import { usePlayback } from '../store/playback.ts';
+import { useSettings, type GrammarStyle, type Mode } from '../store/settings.ts';
+import type { LibraryItem } from '../types.ts';
+
+const seg = 'flex items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]';
+const segItem = 'flex cursor-pointer items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[13px] font-semibold text-muted data-[state=on]:bg-surface2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_0_0_1px_var(--line2)]';
+
+export function Header({ library, item }: { library: LibraryItem[]; item: LibraryItem }) {
+  const { mode, gstyle, theme, set } = useSettings();
+  return (
+    <header className="border-b border-line">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5 md:px-7">
+        <div className="text-[19px] font-extrabold tracking-tight">Lernen<span className="text-en">stein</span></div>
+        <SongPicker library={library} item={item} />
+        <div className="flex-1" />
+        <ToggleGroup.Root type="single" value={mode} onValueChange={(v) => v && set({ mode: v as Mode })} className={seg} aria-label="Mode">
+          <ToggleGroup.Item value="line" className={segItem}><TextQuote size={15} />Full line</ToggleGroup.Item>
+          <ToggleGroup.Item value="table" className={segItem}><Rows3 size={15} />Lyrics table</ToggleGroup.Item>
+        </ToggleGroup.Root>
+        <ToggleGroup.Root type="single" value={gstyle} onValueChange={(v) => v && set({ gstyle: v as GrammarStyle })} className={seg} aria-label="Grammar style">
+          <span className="px-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint">Style</span>
+          {(['color', 'underline', 'chips', 'slots'] as const).map((s) => (
+            <ToggleGroup.Item key={s} value={s} className={`${segItem} font-medium capitalize`}>{s}</ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
+        <ToggleGroup.Root type="single" value={theme} onValueChange={(v) => v && set({ theme: v as 'dark' | 'light' })} className={seg} aria-label="Theme">
+          <ToggleGroup.Item value="light" aria-label="Light theme" className={`${segItem} px-2`}><Sun size={16} /></ToggleGroup.Item>
+          <ToggleGroup.Item value="dark" aria-label="Dark theme" className={`${segItem} px-2`}><Moon size={16} /></ToggleGroup.Item>
+        </ToggleGroup.Root>
+      </div>
+    </header>
+  );
+}
+
+function SongPicker({ library, item }: { library: LibraryItem[]; item: LibraryItem }) {
+  const [open, setOpen] = useState(false);
+  const { set } = useSettings();
+  const pick = (i: LibraryItem) => {
+    if (i.source === 'link') { if (i.lyricsUrl) window.open(i.lyricsUrl, '_blank', 'noopener'); return; }
+    set({ slug: i.slug });
+    usePlayback.getState().set({ active: 0, pass: 0, seekTo: null, time: 0, playing: false });
+    setOpen(false);
+  };
+  const songs = library.filter((i) => i.kind === 'song');
+  const poems = library.filter((i) => i.kind === 'poem');
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger className="flex cursor-pointer items-center gap-2.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-left text-sm font-semibold data-[state=open]:border-accent">
+        <span className="grid size-[26px] place-items-center rounded-[7px] bg-surface2 text-en"><Music size={14} /></span>
+        <span className="leading-tight">{item.title}<br /><span className="text-xs font-medium text-muted">{item.by} · {item.level}</span></span>
+        <ChevronDown size={14} />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="start" sideOffset={8} collisionPadding={12}
+          className="z-50 w-[min(560px,calc(100vw-24px))] rounded-2xl border border-line2 bg-surface p-2 text-ink shadow-2xl">
+          <Tabs.Root defaultValue={item.kind}>
+            <Tabs.List className="mb-1.5 flex gap-0.5 rounded-[10px] bg-bg p-[3px]">
+              <Tabs.Trigger value="song" className="flex-1 cursor-pointer rounded-[7px] py-1.5 text-[13px] font-semibold text-muted data-[state=active]:bg-surface2 data-[state=active]:text-ink">Songs · {songs.length}</Tabs.Trigger>
+              <Tabs.Trigger value="poem" className="flex-1 cursor-pointer rounded-[7px] py-1.5 text-[13px] font-semibold text-muted data-[state=active]:bg-surface2 data-[state=active]:text-ink">Poems · {poems.length}</Tabs.Trigger>
+            </Tabs.List>
+            {([['song', songs], ['poem', poems]] as const).map(([kind, list]) => (
+              <Tabs.Content key={kind} value={kind}>
+                <ul role="listbox" aria-label={kind === 'song' ? 'Songs' : 'Poems'} className="m-0 max-h-[60vh] list-none overflow-auto p-0">
+                  {list.map((i) => (
+                    <li key={i.slug} role="option" aria-selected={i.slug === item.slug}>
+                      <button type="button" onClick={() => pick(i)} disabled={i.source === 'link' && !i.lyricsUrl}
+                        className={`flex w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2 text-left disabled:cursor-default disabled:opacity-50 ${i.slug === item.slug ? 'bg-surface2' : 'hover:bg-surface2'}`}>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold">{i.title}</span>
+                          <span className="block text-xs text-muted">{i.by}</span>
+                        </span>
+                        {i.source === 'link' && <span className="flex items-center gap-1 text-xs text-muted"><ExternalLink size={12} />{i.lyricsUrl ? 'link only' : 'no link yet'}</span>}
+                        <span className="whitespace-nowrap rounded-full border border-line2 px-2 py-0.5 font-mono text-[10px] font-semibold text-muted">{i.level}</span>
+                        <span className="w-4 text-accent">{i.slug === item.slug && <Check size={16} strokeWidth={2.6} />}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Tabs.Content>
+            ))}
+          </Tabs.Root>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}

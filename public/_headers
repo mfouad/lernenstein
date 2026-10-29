@@ -1,0 +1,12 @@
+# Cloudflare Workers static assets: response headers by path.
+
+# Vite puts a content hash in these filenames.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fixed filenames. de-en.json is fetched with a ?v= version query.
+/dict/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/pd/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #F5F3EE; --surface: #FFFFFF; --surface2: #F0EDE6; --line: #E3DED3; --line2: #CFC8BA;
+  --ink: #141821; --muted: #525A6A; --faint: #646B7B; --accent: #1F66C9; --en: #A1520B;
+  --good: #15803D; --on: #FFFFFF; --lane: rgba(194, 65, 12, 0.06);
+  --pos-N: #1D5FBF; --pos-V: #C2410C; --pos-AUX: #C2410C; --pos-MOD: #BE185D; --pos-PRON: #6D3FD6;
+  --pos-ADJ: #15803D; --pos-ADV: #0F766E; --pos-DET: #525A6A; --pos-CONN: #A21C7A; --pos-PREP: #8A6A00;
+  --pos-PRT: #B45309; --pos-NUM: #525A6A; --pos-INTJ: #525A6A; --pos-X: #525A6A;
+  --slot-0: #525A6A; --slot-1: #0F766E; --slot-2: #C2410C; --slot-3: #4453D6; --slot-4: #C2410C; --slot-5: #8B3FD6;
+}
+
+.dark {
+  --bg: #0B0F17; --surface: #111723; --surface2: #1A2233; --line: #242D3F; --line2: #364057;
+  --ink: #F4F6FA; --muted: #A3ACBD; --faint: #8A93A6; --accent: #6CB6FF; --en: #F2B872;
+  --good: #4ADE80; --on: #0B0F17; --lane: rgba(255, 154, 92, 0.07);
+  --pos-N: #6FB7FF; --pos-V: #FF9A5C; --pos-AUX: #FF9A5C; --pos-MOD: #FF7AA2; --pos-PRON: #B59CFF;
+  --pos-ADJ: #6FE0A6; --pos-ADV: #4FD1C5; --pos-DET: #C3CAD7; --pos-CONN: #F19AD2; --pos-PREP: #E8C95F;
+  --pos-PRT: #FFBE8C; --pos-NUM: #C3CAD7; --pos-INTJ: #C3CAD7; --pos-X: #C3CAD7;
+  --slot-0: #A3ACBD; --slot-1: #4FD1C5; --slot-2: #FF9A5C; --slot-3: #9AA6FF; --slot-4: #FF9A5C; --slot-5: #C58CFF;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-en: var(--en);
+  --color-good: var(--good);
+  --color-on: var(--on);
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+}
