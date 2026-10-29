@@ -48,21 +48,20 @@ export function isPointerGloss(g: string): boolean {
     || /^forms the\b/i.test(g);
 }
 
-// Up to two short meanings joined with " / ". Only the first may be shortened;
-// a later one that doesn't fit is left out rather than cut mid-phrase.
-export function joinGlosses(raw: string[], meanings = 2, max = 40): string {
-  const out: string[] = [];
+// One word per entry: "to come, to come to" → "come". The infinitive "to" and
+// a leading article are dropped ("a, an" stays as is). The first single-word
+// meaning among all the senses wins; if there is none, the first meaning is
+// cut down to its first word.
+export function joinGlosses(raw: string[], max = 40): string {
+  const parts: string[] = [];
   for (const g of raw) {
     if (isPointerGloss(g)) continue;
-    // Parts an earlier meaning already gave are dropped ("park / park, grounds" → "park / grounds").
-    const seen = new Set(out.flatMap((m) => m.split(', ')));
-    const c = cleanGloss(g, max).split(', ').filter((p) => !seen.has(p)).join(', ');
-    if (!c || isPointerGloss(c)) continue;
-    if (out.length && cleanGloss(g, Infinity).length > max) continue;
-    out.push(c);
-    if (out.length === meanings) break;
+    for (const part of cleanGloss(g, max).split(', ')) {
+      const word = part.replace(/^(?:to|the|an?)\s+(?=\S)/i, '').replace(EDGE_JUNK, '');
+      if (word && !isPointerGloss(word)) parts.push(word);
+    }
   }
-  return out.join(' / ');
+  return parts.find((p) => !/\s/.test(p)) ?? parts[0]?.split(/\s+/)[0].replace(EDGE_JUNK, '') ?? '';
 }
 
 // Entries whose headword is the form itself come first, then inflections;

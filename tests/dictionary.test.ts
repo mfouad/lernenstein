@@ -34,14 +34,17 @@ describe('isPointerGloss', () => {
 });
 
 describe('joinGlosses', () => {
-  it('keeps at most two meanings and skips pointers and duplicates', () => {
-    expect(joinGlosses(['dative of sie', 'dog (animal)', 'dog', 'hound', 'cur'])).toBe('dog / hound');
+  it('gives the first meaning only, skipping pointers', () => {
+    expect(joinGlosses(['dative of sie', 'dog (animal)', 'hound'])).toBe('dog');
   });
-  it('drops parts an earlier meaning already gave', () => {
-    expect(joinGlosses(['park', 'park, grounds'])).toBe('park / grounds');
+  it('drops the infinitive "to" and a leading article', () => {
+    expect(joinGlosses(['to come, to come to'])).toBe('come');
+    expect(joinGlosses(['the open'])).toBe('open');
+    expect(joinGlosses(['a, an'])).toBe('a');
   });
-  it('leaves out a second meaning that would need cutting', () => {
-    expect(joinGlosses(['tree', 'a tall plant with a wooden trunk and branches far above the ground'])).toBe('tree');
+  it('prefers a single-word meaning, else cuts the first to one word', () => {
+    expect(joinGlosses(['to go away', 'to leave'])).toBe('leave');
+    expect(joinGlosses(['stress clinic', 'big house'])).toBe('stress');
   });
 });
 
@@ -126,7 +129,7 @@ describe('the built dictionary (public/dict/de-en.json)', () => {
     expect(bad.slice(0, 5)).toEqual([]);
   });
 
-  it('glosses have at most two meanings', () => {
-    expect(file.e.filter(([, , , g]) => g.split(' / ').length > 2).slice(0, 5)).toEqual([]);
+  it('glosses have a single meaning', () => {
+    expect(file.e.filter(([, , , g]) => /\s/.test(g) && g !== 'a, an').slice(0, 5)).toEqual([]);
   });
 });
