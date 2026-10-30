@@ -1,7 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import { Check, ChevronDown, ExternalLink, Moon, Music, Rows3, Sun, TextQuote } from 'lucide-react';
+import { Boxes, Check, ChevronDown, ExternalLink, Moon, Music, Rows3, Sun, TextQuote } from 'lucide-react';
 import { useState } from 'react';
 import { usePlayback } from '../store/playback.ts';
 import { useSettings, type GrammarStyle, type Mode } from '../store/settings.ts';
@@ -11,7 +11,7 @@ const seg = 'flex items-center gap-0.5 rounded-[10px] border border-line bg-surf
 const segItem = 'flex cursor-pointer items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[13px] font-semibold text-muted data-[state=on]:bg-surface2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_0_0_1px_var(--line2)]';
 
 export function Header({ library, item }: { library: LibraryItem[]; item: LibraryItem }) {
-  const { mode, gstyle, theme, set } = useSettings();
+  const { mode, gstyle, chunks, theme, set } = useSettings();
   return (
     <header className="border-b border-line">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5 md:px-7">
@@ -24,9 +24,12 @@ export function Header({ library, item }: { library: LibraryItem[]; item: Librar
         </ToggleGroup.Root>
         <ToggleGroup.Root type="single" value={gstyle} onValueChange={(v) => v && set({ gstyle: v as GrammarStyle })} className={seg} aria-label="Grammar style">
           <span className="px-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint">Style</span>
-          {(['color', 'underline', 'chips', 'slots'] as const).map((s) => (
+          {(['color', 'underline', 'chips'] as const).map((s) => (
             <ToggleGroup.Item key={s} value={s} className={`${segItem} font-medium capitalize`}>{s}</ToggleGroup.Item>
           ))}
+        </ToggleGroup.Root>
+        <ToggleGroup.Root type="multiple" value={chunks ? ['chunks'] : []} onValueChange={(v) => set({ chunks: v.includes('chunks') })} className={seg} aria-label="Chunks">
+          <ToggleGroup.Item value="chunks" className={segItem}><Boxes size={15} />Chunks</ToggleGroup.Item>
         </ToggleGroup.Root>
         <ToggleGroup.Root type="single" value={theme} onValueChange={(v) => v && set({ theme: v as 'dark' | 'light' })} className={seg} aria-label="Theme">
           <ToggleGroup.Item value="light" aria-label="Light theme" className={`${segItem} px-2`}><Sun size={16} /></ToggleGroup.Item>

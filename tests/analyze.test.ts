@@ -81,3 +81,21 @@ describe('forms', () => {
     expect(l.tokens[0].gloss).toContain('+ it');
   });
 });
+
+describe('coordinated clauses', () => {
+  it('und between two clauses starts a new clause with the link in slot 0', () => {
+    const [l] = run('Ich gehe heute und du kommst morgen.');
+    expect(slots(l)).toBe('Ich:1 gehe:2 heute:3 und:0 du:1 kommst:2 morgen:3');
+    expect(new Set(l.tokens.map((t) => t.clause)).size).toBe(2);
+  });
+
+  it('und between two nouns before the final verb does not split the clause', () => {
+    const [l] = run('Du kannst das Buch und Brot lesen.');
+    expect(new Set(l.tokens.map((t) => t.clause)).size).toBe(1);
+  });
+
+  it('aber as a particle does not split the clause', () => {
+    const [l] = run('Du kannst aber heute das Buch lesen.');
+    expect(new Set(l.tokens.map((t) => t.clause)).size).toBe(1);
+  });
+});

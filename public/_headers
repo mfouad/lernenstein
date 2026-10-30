@@ -4,7 +4,7 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Fixed filenames. de-en.json is fetched with a ?v= version query.
+# Fixed filenames. de-en.json and the pd files are fetched with a ?v= version query.
 /dict/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 

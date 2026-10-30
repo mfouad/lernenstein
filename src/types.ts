@@ -3,8 +3,8 @@ export type Pos =
   | 'N' | 'V' | 'AUX' | 'MOD' | 'PRON' | 'ADJ' | 'ADV'
   | 'DET' | 'PREP' | 'CONN' | 'PRT' | 'NUM' | 'INTJ' | 'X';
 
-// Topological slots: 0 link, 1 Vorfeld, 2 verb (left bracket),
-// 3 middle field, 4 verb end (right bracket), 5 after the bracket.
+// Slots: 0 link, 1 first, 2 verb, 3 middle, 4 the verb's second part,
+// 5 after.
 export type Slot = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type FormKey =

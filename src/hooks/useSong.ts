@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyze } from '../analysis/analyzer.ts';
+import dictVersion from '../analysis/dictVersion.json';
 import { loadText } from '../sources/fetchText.ts';
 import type { AnalyzedSong, LibraryItem } from '../types.ts';
 
 // Public-domain items ship pre-analysed in public/pd/ (the stand-in for a model
 // endpoint). Everything else is fetched, cached on the device and analysed here.
 async function loadPublicDomain(item: LibraryItem): Promise<AnalyzedSong> {
-  const res = await fetch(`${import.meta.env.BASE_URL}pd/${item.slug}.json`);
+  // ?v= busts the browser and CDN cache: build:pd reruns after every build:dict.
+  const res = await fetch(`${import.meta.env.BASE_URL}pd/${item.slug}.json?v=${dictVersion.version}`);
   if (!res.ok) throw new Error(`No public-domain file for ${item.slug}`);
   return (await res.json()).song;
 }

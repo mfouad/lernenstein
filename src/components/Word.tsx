@@ -1,11 +1,14 @@
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { BookmarkPlus, Check } from 'lucide-react';
 import type { CSSProperties } from 'react';
-import { FORM_INFO, POS_INFO, SLOT_INFO, UNDERLINE } from '../lib/grammar.ts';
+import { shortGloss } from '../lib/gloss.ts';
+import { FORM_INFO, POS_INFO, UNDERLINE } from '../lib/grammar.ts';
 import { useSettings, wordKey, type SavedWord } from '../store/settings.ts';
 import type { Pos, Token } from '../types.ts';
 
 const NOUNS_VERBS: Pos[] = ['N', 'V', 'AUX', 'MOD', 'PRT'];
+// Keep their chip even when their forms (adjective endings…) aren't learned yet.
+const ALWAYS_CHIP: Pos[] = ['ADJ', 'X'];
 
 export function Word({ token, size }: { token: Token; size: 'lg' | 'sm' }) {
   const s = useSettings();
@@ -19,7 +22,6 @@ export function Word({ token, size }: { token: Token; size: 'lg' | 'sm' }) {
 
   const style = {
     '--c': `var(--pos-${token.pos})`,
-    '--s': `var(--slot-${token.slot})`,
   } as CSSProperties;
   const showColor = !quiet && s.gstyle === 'color';
   const underline = !quiet && s.gstyle === 'underline' ? UNDERLINE[token.pos] : undefined;
@@ -31,32 +33,19 @@ export function Word({ token, size }: { token: Token; size: 'lg' | 'sm' }) {
         <span
           tabIndex={0}
           style={style}
-          className={`group relative inline-flex flex-col items-start rounded-xl outline-none transition-opacity hover:bg-surface2 focus-visible:bg-surface2 ${big ? 'gap-2 -m-2 p-2' : 'gap-0.5 -m-1 p-1'} ${dim ? 'opacity-20 hover:opacity-70' : ''}`}
+          className={`group relative inline-flex flex-col items-start rounded-xl outline-none transition-opacity hover:bg-surface2 focus-visible:bg-surface2 ${big ? 'gap-[0.12em] -m-2 p-2' : 'gap-0.5 -m-1 p-1'} ${dim ? 'opacity-20 hover:opacity-70' : ''}`}
         >
-          {!quiet && s.gstyle === 'chips' && (
+          {(!quiet || (!s.hideGrammar && ALWAYS_CHIP.includes(token.pos))) && s.gstyle === 'chips' && (
             <span className="rounded-full bg-(--c) px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-on">{POS_INFO[token.pos].abbr}</span>
           )}
-          {!s.hideGrammar && s.gstyle === 'slots' && (
-            <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-(--s)">
-              <span className="grid size-5 place-items-center rounded-full border-2 border-(--s)">{SLOT_INFO[token.slot].mark}</span>
-              {big && SLOT_INFO[token.slot].name}
-            </span>
-          )}
           <span
-            className={`font-extrabold tracking-tight leading-none ${big ? 'text-5xl md:text-6xl' : 'text-xl'} ${showColor ? 'text-(--c)' : ''}`}
+            className={`font-extrabold tracking-tight leading-none ${big ? 'text-(length:--word-size,3.75rem)' : 'text-xl'} ${showColor ? 'text-(--c)' : ''}`}
             style={underline ? { textDecorationLine: 'underline', textDecorationStyle: underline as CSSProperties['textDecorationStyle'], textDecorationColor: 'var(--c)', textDecorationThickness: big ? 4 : 2, textUnderlineOffset: big ? 12 : 5 } : undefined}
           >
             {token.text}
           </span>
           {!s.hideTranslation && (
-            <span className={`font-semibold ${big ? 'text-lg' : 'text-xs'} ${showColor || underline ? 'text-muted' : 'text-en'}`}>{token.gloss || '—'}</span>
-          )}
-          {big && !s.hideGrammar && learnedForms.length > 0 && (
-            <span className="flex flex-wrap gap-1.5">
-              {learnedForms.map((f) => (
-                <span key={f} className="rounded-full border border-dashed border-(--c) px-2 py-0.5 font-mono text-[11px] font-semibold text-(--c)">{FORM_INFO[f].short}</span>
-              ))}
-            </span>
+            <span className={`font-semibold ${big ? 'text-[max(0.75rem,0.34em)]' : 'text-xs'} ${showColor || underline ? 'text-muted' : 'text-en'}`}>{token.gloss ? shortGloss(token.gloss, token.pos) : '—'}</span>
           )}
           {(known || saved) && (
             <span className="absolute -right-1 -top-1 flex gap-0.5 group-hover:opacity-0">
@@ -95,9 +84,8 @@ function ActionButton({ label, on, onClick, tone, children }: { label: string; o
 function WordCard({ token, word, known, saved }: { token: Token; word: SavedWord; known: boolean; saved: boolean }) {
   const { learned, toggleWord } = useSettings();
   const pos = POS_INFO[token.pos];
-  const slot = SLOT_INFO[token.slot];
   return (
-    <div style={{ '--c': `var(--pos-${token.pos})`, '--s': `var(--slot-${token.slot})` } as CSSProperties}>
+    <div style={{ '--c': `var(--pos-${token.pos})` } as CSSProperties}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-2xl font-extrabold leading-tight text-(--c)">{token.text}</div>
@@ -118,10 +106,6 @@ function WordCard({ token, word, known, saved }: { token: Token; word: SavedWord
       <div className="flex gap-2.5 border-t border-line py-2">
         <span className="h-fit rounded-full border border-line2 px-1.5 font-mono text-[10px] font-semibold">{pos.abbr}</span>
         <span><b className="text-ink">{pos.name}</b>{pos.hint && ` — ${pos.hint}`}</span>
-      </div>
-      <div className="flex gap-2.5 border-t border-line py-2">
-        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-(--s) font-mono text-[11px] font-bold text-on">{slot.mark}</span>
-        <span><b className="text-ink">{slot.name}</b>{token.clauseType === 'sub' && ' (sub clause)'} — {slot.desc}</span>
       </div>
       {token.forms.length > 0 && (
         <div className="flex flex-wrap gap-1.5 border-t border-line pt-2.5">

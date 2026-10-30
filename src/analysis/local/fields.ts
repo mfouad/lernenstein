@@ -34,12 +34,27 @@ export function sentences(words: FieldWord[], lineStartsLower: (line: number) =>
   return out;
 }
 
+// "und/oder/sondern" opens a new clause when a verb follows right away (und kaufe…)
+// or after one pronoun or adverb (und du kommst…, und dann…). Two nouns joined
+// before a final verb (Brot und Wasser trinken) stay one clause. "aber", "denn"
+// and "doch" are left out: mid-clause they are usually particles.
+const CLAUSE_JOINERS = new Set(['und', 'oder', 'sondern']);
+function opensClause(sentence: FieldWord[], i: number): boolean {
+  const next = sentence[i + 1];
+  const after = sentence[i + 2];
+  if (!next) return false;
+  return isVerb(next) || ((next.pos === 'PRON' || next.pos === 'ADV') && !!after && isVerb(after));
+}
+
 function clauses(sentence: FieldWord[]): FieldWord[][] {
   const out: FieldWord[][] = [];
   let cur: FieldWord[] = [];
   sentence.forEach((w, i) => {
     // A subordinator in the middle starts a new clause even without a comma.
     if (cur.length && SUBORDINATORS.has(w.norm) && !COORDINATORS.has(sentence[i - 1]?.norm ?? '')) {
+      out.push(cur); cur = [];
+    }
+    if (cur.length && CLAUSE_JOINERS.has(w.norm) && cur.some(isVerb) && opensClause(sentence, i)) {
       out.push(cur); cur = [];
     }
     cur.push(w);

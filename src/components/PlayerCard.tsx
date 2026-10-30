@@ -1,4 +1,4 @@
-import { Pause, Play, Repeat, SkipBack, SkipForward } from 'lucide-react';
+import { Clock, Pause, Play, Repeat, SkipBack, SkipForward } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
 import { usePlayback } from '../store/playback.ts';
@@ -8,7 +8,7 @@ import { fmt } from './FullLine.tsx';
 
 export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSong | undefined }) {
   const player = useRef<YouTubePlayer | null>(null);
-  const { repeat, set } = useSettings();
+  const { repeat, speed, delay, set } = useSettings();
   const { active, time, playing, seekTo, goTo } = usePlayback();
   const synced = song?.lines[0]?.time != null;
 
@@ -18,7 +18,8 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
     const id = setInterval(async () => {
       const p = player.current;
       if (!p) return;
-      const t: number = await p.getCurrentTime();
+      // Lyrics clock = video clock + delay.
+      const t: number = (await p.getCurrentTime()) + useSettings.getState().delay;
       const pb = usePlayback.getState();
       pb.set({ time: t });
       if (!pb.playing) return;
@@ -27,7 +28,7 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       const nextTime = lines[pb.active + 1]?.time;
       const reps = useSettings.getState().repeat;
       if (cur?.time != null && nextTime != null && t >= nextTime - 0.05 && t < nextTime + 1.5 && pb.pass < reps) {
-        p.seekTo(cur.time, true);
+        p.seekTo(cur.time - useSettings.getState().delay, true);
         pb.set({ pass: pb.pass + 1 });
         return;
       }
@@ -41,10 +42,19 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
   // Seeks requested elsewhere (clicking a line, prev/next).
   useEffect(() => {
     if (seekTo == null) return;
-    player.current?.seekTo(seekTo, true);
+    player.current?.seekTo(seekTo - useSettings.getState().delay, true);
     usePlayback.getState().set({ seekTo: null });
   }, [seekTo]);
 
+  useEffect(() => { player.current?.setPlaybackRate(speed); }, [speed]);
+
+  // Align the first line with the current video time; the delay then applies to every line.
+  const sync = async () => {
+    const first = song?.lines.find((l) => l.time != null)?.time;
+    const p = player.current;
+    if (first == null || !p) return;
+    set({ delay: Math.round((first - (await p.getCurrentTime())) * 100) / 100 });
+  };
   const step = (d: number) => {
     const i = Math.max(0, Math.min((song?.lines.length ?? 1) - 1, active + d));
     goTo(i, song?.lines[i]?.time ?? null);
@@ -63,7 +73,7 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
             className="size-full"
             iframeClassName="size-full"
             opts={{ playerVars: { playsinline: 1, rel: 0 } }}
-            onReady={(e: YouTubeEvent) => { player.current = e.target; }}
+            onReady={(e: YouTubeEvent) => { player.current = e.target; e.target.setPlaybackRate(useSettings.getState().speed); }}
             onStateChange={(e: YouTubeEvent<number>) => usePlayback.getState().set({ playing: e.data === 1 })}
           />
         ) : (
@@ -84,12 +94,37 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
           {repeat > 0 && <span className="absolute -right-2 -top-2 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent px-1 text-[10px] font-extrabold text-bg">{repeat}</span>}
         </button>
       </div>
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div role="group" aria-label="Playback speed" className="flex overflow-hidden rounded-[10px] border border-line2">
+          {SPEEDS.map((v) => (
+            <button key={v} type="button" aria-pressed={speed === v} onClick={() => set({ speed: v })}
+              className={`h-8 cursor-pointer px-2.5 font-mono text-xs ${speed === v ? 'bg-accent font-bold text-bg' : 'bg-surface2 text-muted'}`}>
+              {v}x
+            </button>
+          ))}
+        </div>
+        {synced && (
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={sync} disabled={!item.youtubeId} title="Press when the first line starts in the video"
+              className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] border border-line2 bg-surface2 px-2.5 text-xs text-ink disabled:opacity-40">
+              <Clock size={14} />
+              Sync first line
+            </button>
+            <button type="button" title="Reset delay" aria-label="Reset delay" onClick={() => set({ delay: 0 })}
+              className={`cursor-pointer bg-transparent font-mono text-xs ${delay ? 'text-accent' : 'text-muted'}`}>
+              {delay > 0 ? '+' : ''}{delay.toFixed(2)}s
+            </button>
+          </div>
+        )}
+      </div>
       {!synced && song && (
         <p className="mb-0 mt-2.5 text-xs text-muted">This text has no timings. Step through it with ← → or the buttons.</p>
       )}
     </section>
   );
 }
+
+const SPEEDS = [0.7, 0.8, 0.9, 1] as const;
 
 function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (

@@ -1,4 +1,4 @@
-import type { FormKey, Pos, Slot } from '../types.ts';
+import type { FormKey, Pos } from '../types.ts';
 
 export const POS_INFO: Record<Pos, { abbr: string; name: string; hint: string }> = {
   N: { abbr: 'N', name: 'noun', hint: 'Always capitalised; learn it with der, die or das.' },
@@ -15,15 +15,6 @@ export const POS_INFO: Record<Pos, { abbr: string; name: string; hint: string }>
   NUM: { abbr: 'NUM', name: 'number', hint: '' },
   INTJ: { abbr: 'INTJ', name: 'interjection', hint: '' },
   X: { abbr: '?', name: 'unknown', hint: 'Not in the word table yet.' },
-};
-
-export const SLOT_INFO: Record<Slot, { mark: string; name: string; desc: string }> = {
-  0: { mark: '+', name: 'Link', desc: 'und, aber, denn, doch: sit before the clause and change nothing.' },
-  1: { mark: '1', name: 'Vorfeld', desc: 'Exactly one block before the verb: subject, object, time or question word.' },
-  2: { mark: '2', name: 'Verb', desc: 'The conjugated verb. In a sub clause the connector (dass, weil, was) sits here.' },
-  3: { mark: '3', name: 'Middle', desc: 'Pronouns first, then the rest.' },
-  4: { mark: '4', name: 'Verb end', desc: 'Infinitives, participles, separable prefixes; in sub clauses the conjugated verb.' },
-  5: { mark: '5', name: 'After', desc: 'After the verb bracket: comparisons and add-ons.' },
 };
 
 export const FORM_INFO: Record<FormKey, { short: string; name: string }> = {

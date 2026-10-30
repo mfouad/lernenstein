@@ -8,7 +8,7 @@ test('public-domain song: full line, translation, table', async ({ page }) => {
   await expect(page.getByText('Gedanken', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Thoughts are free,')).toBeVisible();
   await page.getByRole('radio', { name: 'Lyrics table' }).click();
-  await expect(page.getByText(/Vorfeld$/).first()).toBeVisible();
+  await expect(page.getByText('who does it')).toBeVisible();
   await expect(page.getByText('thoughts are free.').first()).toBeVisible();
 });
 

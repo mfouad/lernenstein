@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { FormKey, Pos } from '../types.ts';
 
 export type Mode = 'line' | 'table';
-export type GrammarStyle = 'color' | 'underline' | 'chips' | 'slots';
+export type GrammarStyle = 'color' | 'underline' | 'chips';
 export type View = 'all' | 'new' | 'known' | 'nv';
 export type Theme = 'dark' | 'light';
 
@@ -20,12 +20,15 @@ interface State {
   theme: Theme;
   mode: Mode;
   gstyle: GrammarStyle;
+  chunks: boolean; // group words into chunks with the verb bracket
   view: View;
   hideTranslation: boolean;
   hideGrammar: boolean;
   translateLines: boolean;
   learned: FormKey[];
   repeat: 0 | 1 | 2 | 3;
+  speed: 0.7 | 0.8 | 0.9 | 1;
+  delay: number; // seconds added to the video clock to get the lyrics clock
   known: Record<string, SavedWord>;
   saved: Record<string, SavedWord>;
   set: (patch: Partial<Omit<State, 'set' | 'toggleWord' | 'toggleForm'>>) => void;
@@ -40,12 +43,15 @@ export const useSettings = create<State>()(
       theme: 'dark',
       mode: 'line',
       gstyle: 'color',
+      chunks: true,
       view: 'all',
       hideTranslation: false,
       hideGrammar: false,
       translateLines: false,
       learned: ['present', 'acc', 'dat', 'kein', 'modal', 'wQuestion'],
       repeat: 0,
+      speed: 1,
+      delay: 0,
       known: {},
       saved: {},
       set: (patch) => set(patch),
@@ -59,7 +65,16 @@ export const useSettings = create<State>()(
         learned: s.learned.includes(form) ? s.learned.filter((f) => f !== form) : [...s.learned, form],
       })),
     }),
-    { name: 'lernenstein-settings' },
+    {
+      name: 'lernenstein-settings',
+      version: 1,
+      // v1 dropped the "slots" grammar style.
+      migrate: (state, version) => {
+        const s = state as Omit<State, 'gstyle'> & { gstyle: string };
+        if (version < 1 && s.gstyle === 'slots') s.gstyle = 'color';
+        return s as State;
+      },
+    },
   ),
 );
 
