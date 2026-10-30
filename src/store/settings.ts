@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { FORM_ORDER } from '../lib/grammar.ts';
+import type { SyncPoint } from '../lib/sync.ts';
 import type { FormKey, Pos } from '../types.ts';
 
 export type Mode = 'line' | 'table';
+export type MainLang = 'de' | 'en';
 export type GrammarStyle = 'color' | 'underline' | 'chips';
 export type View = 'all' | 'new' | 'known' | 'nv';
 export type Theme = 'dark' | 'light';
@@ -20,6 +23,7 @@ interface State {
   theme: Theme;
   mode: Mode;
   gstyle: GrammarStyle;
+  main: MainLang; // which language is large in the full line view
   chunks: boolean; // group words into chunks with the verb bracket
   view: View;
   hideTranslation: boolean;
@@ -28,7 +32,8 @@ interface State {
   learned: FormKey[];
   repeat: 0 | 1 | 2 | 3;
   speed: 0.7 | 0.8 | 0.9 | 1;
-  delay: number; // seconds added to the video clock to get the lyrics clock
+  pause: 0 | 2 | 5 | 10; // seconds to pause after each line
+  syncs: Record<string, SyncPoint[]>; // per song slug: line time = video time pairs
   known: Record<string, SavedWord>;
   saved: Record<string, SavedWord>;
   set: (patch: Partial<Omit<State, 'set' | 'toggleWord' | 'toggleForm'>>) => void;
@@ -43,15 +48,17 @@ export const useSettings = create<State>()(
       theme: 'dark',
       mode: 'line',
       gstyle: 'color',
+      main: 'de',
       chunks: true,
       view: 'all',
       hideTranslation: false,
       hideGrammar: false,
       translateLines: false,
-      learned: ['present', 'acc', 'dat', 'kein', 'modal', 'wQuestion'],
+      learned: FORM_ORDER,
       repeat: 0,
       speed: 1,
-      delay: 0,
+      pause: 0,
+      syncs: {},
       known: {},
       saved: {},
       set: (patch) => set(patch),
@@ -67,11 +74,13 @@ export const useSettings = create<State>()(
     }),
     {
       name: 'lernenstein-settings',
-      version: 1,
+      version: 2,
       // v1 dropped the "slots" grammar style.
       migrate: (state, version) => {
         const s = state as Omit<State, 'gstyle'> & { gstyle: string };
         if (version < 1 && s.gstyle === 'slots') s.gstyle = 'color';
+        // v2 enabled every form by default (the "forms I've learned" card is gone).
+        if (version < 2) s.learned = FORM_ORDER;
         return s as State;
       },
     },

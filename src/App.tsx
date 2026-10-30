@@ -4,7 +4,7 @@ import { FullLine } from './components/FullLine.tsx';
 import { Header } from './components/Header.tsx';
 import { LyricsTable } from './components/LyricsTable.tsx';
 import { PlayerCard } from './components/PlayerCard.tsx';
-import { FormsCard, MyWordsCard, ShowCard } from './components/Sidebar.tsx';
+import { MyWordsCard, ShowCard } from './components/Sidebar.tsx';
 import { loadLibrary, type RawLibrary } from './data/library.ts';
 import { useSong } from './hooks/useSong.ts';
 import { persistStorage } from './sources/db.ts';
@@ -48,11 +48,10 @@ export default function App() {
             </Status>
           )}
           {song && (mode === 'line' ? <FullLine song={song} /> : <LyricsTable song={song} />)}
+          <div className="mt-4"><ShowCard /></div>
         </main>
         <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
           <PlayerCard item={item} song={song} />
-          <ShowCard />
-          <FormsCard song={song} />
           <MyWordsCard song={song} />
         </aside>
       </div>

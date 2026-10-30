@@ -1,6 +1,7 @@
-import { Clock, Pause, Play, Repeat, SkipBack, SkipForward } from 'lucide-react';
+import { Clock, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
+import { addPoint, lineToVideo, videoToLine, type SyncPoint } from '../lib/sync.ts';
 import { usePlayback } from '../store/playback.ts';
 import { useSettings } from '../store/settings.ts';
 import type { AnalyzedSong, LibraryItem } from '../types.ts';
@@ -8,8 +9,11 @@ import { fmt } from './FullLine.tsx';
 
 export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSong | undefined }) {
   const player = useRef<YouTubePlayer | null>(null);
-  const { repeat, speed, delay, set } = useSettings();
+  const { repeat, speed, pause, set } = useSettings();
+  const points = useSettings((s) => s.syncs[item.slug]) ?? NO_POINTS;
   const { active, time, playing, seekTo, goTo } = usePlayback();
+  const pausedAt = useRef('');
+  const resume = useRef<ReturnType<typeof setTimeout>>(undefined);
   const synced = song?.lines[0]?.time != null;
 
   // Follow the video: pick the active line, and replay it while repeating.
@@ -18,8 +22,8 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
     const id = setInterval(async () => {
       const p = player.current;
       if (!p) return;
-      // Lyrics clock = video clock + delay.
-      const t: number = (await p.getCurrentTime()) + useSettings.getState().delay;
+      const pts = useSettings.getState().syncs[item.slug] ?? NO_POINTS;
+      const t = videoToLine(await p.getCurrentTime(), pts);
       const pb = usePlayback.getState();
       pb.set({ time: t });
       if (!pb.playing) return;
@@ -28,40 +32,67 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       const nextTime = lines[pb.active + 1]?.time;
       const reps = useSettings.getState().repeat;
       if (cur?.time != null && nextTime != null && t >= nextTime - 0.05 && t < nextTime + 1.5 && pb.pass < reps) {
-        p.seekTo(cur.time - useSettings.getState().delay, true);
+        p.seekTo(lineToVideo(cur.time, pts), true);
         pb.set({ pass: pb.pass + 1 });
+        return;
+      }
+      // Pause after the last pass of a line, then carry on.
+      const secs = useSettings.getState().pause;
+      const key = `${pb.active}:${pb.pass}`;
+      if (secs > 0 && nextTime != null && pb.pass >= reps && pausedAt.current !== key && t >= nextTime - 0.2 && t < nextTime + 1.5) {
+        pausedAt.current = key;
+        p.pauseVideo();
+        clearTimeout(resume.current);
+        resume.current = setTimeout(() => p.playVideo(), secs * 1000);
         return;
       }
       let idx = 0;
       lines.forEach((l, i) => { if (l.time != null && l.time <= t + 0.1) idx = i; });
       if (idx !== pb.active) pb.set({ active: idx, pass: 0 });
     }, 200);
-    return () => clearInterval(id);
-  }, [song, synced]);
+    return () => { clearInterval(id); clearTimeout(resume.current); };
+  }, [song, synced, item.slug]);
 
   // Seeks requested elsewhere (clicking a line, prev/next).
   useEffect(() => {
     if (seekTo == null) return;
-    player.current?.seekTo(seekTo - useSettings.getState().delay, true);
+    player.current?.seekTo(lineToVideo(seekTo, useSettings.getState().syncs[item.slug] ?? NO_POINTS), true);
     usePlayback.getState().set({ seekTo: null });
-  }, [seekTo]);
+  }, [seekTo, item.slug]);
 
   useEffect(() => { player.current?.setPlaybackRate(speed); }, [speed]);
 
-  // Align the first line with the current video time; the delay then applies to every line.
-  const sync = async () => {
-    const first = song?.lines.find((l) => l.time != null)?.time;
+  // Space plays or pauses from anywhere except text fields.
+  useEffect(() => {
+    const ignore = (e: KeyboardEvent) => e.code !== 'Space' || !!(e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]');
+    const down = (e: KeyboardEvent) => {
+      if (ignore(e)) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      const p = player.current;
+      if (usePlayback.getState().playing) p?.pauseVideo(); else p?.playVideo();
+    };
+    // A focused button would otherwise also click on Space.
+    const up = (e: KeyboardEvent) => { if (!ignore(e)) e.preventDefault(); };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, []);
+
+  // Pair the active line's time with the current video time (Line = Video).
+  const setPoints = (next: SyncPoint[]) => set({ syncs: { ...useSettings.getState().syncs, [item.slug]: next } });
+  const sync = async (which: 'first' | 'current') => {
+    const line = which === 'first' ? song?.lines.find((l) => l.time != null)?.time : song?.lines[active]?.time;
     const p = player.current;
-    if (first == null || !p) return;
-    set({ delay: Math.round((first - (await p.getCurrentTime())) * 100) / 100 });
+    if (line == null || !p) return;
+    const video = Math.round((await p.getCurrentTime()) * 100) / 100;
+    setPoints(addPoint(points, { line, video }));
   };
   const step = (d: number) => {
     const i = Math.max(0, Math.min((song?.lines.length ?? 1) - 1, active + d));
     goTo(i, song?.lines[i]?.time ?? null);
   };
   const toggle = () => (playing ? player.current?.pauseVideo() : player.current?.playVideo());
-  const nextRepeat = ((repeat + 1) % 4) as 0 | 1 | 2 | 3;
-  const repeatLabel = repeat === 0 ? 'Repeat each line: off' : `Repeat each line ${repeat} more time${repeat > 1 ? 's' : ''}`;
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-3.5">
@@ -87,36 +118,52 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
           {playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}
         </button>
         <IconButton label="Next line" onClick={() => step(1)}><SkipForward size={15} fill="currentColor" /></IconButton>
-        <span className="ml-1 mr-auto font-mono text-xs text-muted">{synced ? fmt(time) : 'untimed'}</span>
-        <button type="button" onClick={() => set({ repeat: nextRepeat })} aria-label={repeatLabel} title={repeatLabel}
-          className={`relative grid size-9 cursor-pointer place-items-center rounded-[10px] border ${repeat ? 'border-accent text-accent' : 'border-line2 text-muted'}`}>
-          <Repeat size={17} />
-          {repeat > 0 && <span className="absolute -right-2 -top-2 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-accent px-1 text-[10px] font-extrabold text-bg">{repeat}</span>}
-        </button>
+        <span className="ml-1 font-mono text-xs text-muted">{synced ? fmt(time) : 'untimed'}</span>
       </div>
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div role="group" aria-label="Playback speed" className="flex overflow-hidden rounded-[10px] border border-line2">
-          {SPEEDS.map((v) => (
-            <button key={v} type="button" aria-pressed={speed === v} onClick={() => set({ speed: v })}
-              className={`h-8 cursor-pointer px-2.5 font-mono text-xs ${speed === v ? 'bg-accent font-bold text-bg' : 'bg-surface2 text-muted'}`}>
-              {v}x
-            </button>
-          ))}
-        </div>
+      <div className="mt-3 grid gap-2.5">
+        <OptionRow label="Repeat">
+          <Options value={repeat} options={[[0, 'Off'], [1, '1×'], [2, '2×'], [3, '3×']]} onChange={(v) => set({ repeat: v })} aria="Repeat each line" />
+        </OptionRow>
+        <OptionRow label="Speed">
+          <Options value={speed} options={SPEEDS.map((v) => [v, `${v}x`] as const)} onChange={(v) => set({ speed: v })} aria="Playback speed" mono />
+        </OptionRow>
+        <OptionRow label="Pause">
+          <Options value={pause} options={[[0, 'Off'], [2, '2s'], [5, '5s'], [10, '10s']]} onChange={(v) => set({ pause: v })} aria="Pause after each line" />
+        </OptionRow>
         {synced && (
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={sync} disabled={!item.youtubeId} title="Press when the first line starts in the video"
-              className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] border border-line2 bg-surface2 px-2.5 text-xs text-ink disabled:opacity-40">
-              <Clock size={14} />
-              Sync first line
-            </button>
-            <button type="button" title="Reset delay" aria-label="Reset delay" onClick={() => set({ delay: 0 })}
-              className={`cursor-pointer bg-transparent font-mono text-xs ${delay ? 'text-accent' : 'text-muted'}`}>
-              {delay > 0 ? '+' : ''}{delay.toFixed(2)}s
-            </button>
-          </div>
+          <OptionRow label="Sync">
+            {(['first', 'current'] as const).map((which) => (
+              <button key={which} type="button" onClick={() => sync(which)} disabled={!item.youtubeId}
+                title={which === 'first' ? 'Press when the first line starts in the video' : 'Press when the current line is sung in the video'}
+                className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[10px] border border-line2 bg-surface2 px-2.5 text-xs text-ink disabled:opacity-40">
+                <Clock size={14} />
+                {which === 'first' ? 'First line' : 'Current line'}
+              </button>
+            ))}
+          </OptionRow>
         )}
       </div>
+      {synced && points.length > 0 && (
+        <table className="mt-2.5 w-full font-mono text-xs text-muted">
+          <thead>
+            <tr className="text-left"><th className="font-normal">Line</th><th className="font-normal">Video</th><td className="text-right">
+              <button type="button" onClick={() => setPoints([])} className="cursor-pointer bg-transparent text-xs text-muted">Clear</button>
+            </td></tr>
+          </thead>
+          <tbody>
+            {points.map((p) => (
+              <tr key={p.line}>
+                <td>{p.line.toFixed(2)}s</td>
+                <td>{p.video.toFixed(2)}s</td>
+                <td className="text-right">
+                  <button type="button" aria-label="Remove sync point" title="Remove" onClick={() => setPoints(points.filter((q) => q !== p))}
+                    className="cursor-pointer bg-transparent align-middle text-muted"><X size={13} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {!synced && song && (
         <p className="mb-0 mt-2.5 text-xs text-muted">This text has no timings. Step through it with ← → or the buttons.</p>
       )}
@@ -124,7 +171,30 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
   );
 }
 
+const NO_POINTS: SyncPoint[] = [];
 const SPEEDS = [0.7, 0.8, 0.9, 1] as const;
+
+function OptionRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-14 shrink-0 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint">{label}</span>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </div>
+  );
+}
+
+function Options<T extends number>({ value, options, onChange, aria, mono }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; aria: string; mono?: boolean }) {
+  return (
+    <div role="group" aria-label={aria} className="flex overflow-hidden rounded-[10px] border border-line2">
+      {options.map(([v, label]) => (
+        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)}
+          className={`h-8 cursor-pointer px-2.5 text-xs ${mono ? 'font-mono' : ''} ${value === v ? 'bg-accent font-bold text-bg' : 'bg-surface2 text-muted'}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (

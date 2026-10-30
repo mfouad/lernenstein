@@ -4,20 +4,22 @@ import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import { Boxes, Check, ChevronDown, ExternalLink, Moon, Music, Rows3, Sun, TextQuote } from 'lucide-react';
 import { useState } from 'react';
 import { usePlayback } from '../store/playback.ts';
-import { useSettings, type GrammarStyle, type Mode } from '../store/settings.ts';
+import { useSettings, type GrammarStyle, type MainLang, type Mode } from '../store/settings.ts';
 import type { LibraryItem } from '../types.ts';
 
 const seg = 'flex items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]';
 const segItem = 'flex cursor-pointer items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[13px] font-semibold text-muted data-[state=on]:bg-surface2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_0_0_1px_var(--line2)]';
 
 export function Header({ library, item }: { library: LibraryItem[]; item: LibraryItem }) {
-  const { mode, gstyle, chunks, theme, set } = useSettings();
+  const { mode, gstyle, main, chunks, theme, set } = useSettings();
   return (
     <header className="border-b border-line">
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5 md:px-7">
-        <div className="text-[19px] font-extrabold tracking-tight">Lernen<span className="text-en">stein</span></div>
-        <SongPicker library={library} item={item} />
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-stretch gap-x-5 gap-y-3 px-4 py-3.5 md:px-7">
+        <div className="flex items-center py-1 text-[44px] font-extrabold leading-none tracking-tight">Lernen<span className="text-en">stein</span></div>
         <div className="flex-1" />
+        <SongPicker library={library} item={item} />
+      </div>
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-4 pb-3.5 md:px-7">
         <ToggleGroup.Root type="single" value={mode} onValueChange={(v) => v && set({ mode: v as Mode })} className={seg} aria-label="Mode">
           <ToggleGroup.Item value="line" className={segItem}><TextQuote size={15} />Full line</ToggleGroup.Item>
           <ToggleGroup.Item value="table" className={segItem}><Rows3 size={15} />Lyrics table</ToggleGroup.Item>
@@ -27,6 +29,10 @@ export function Header({ library, item }: { library: LibraryItem[]; item: Librar
           {(['color', 'underline', 'chips'] as const).map((s) => (
             <ToggleGroup.Item key={s} value={s} className={`${segItem} font-medium capitalize`}>{s}</ToggleGroup.Item>
           ))}
+        </ToggleGroup.Root>
+        <ToggleGroup.Root type="single" value={main} onValueChange={(v) => v && set({ main: v as MainLang })} className={seg} aria-label="Main language">
+          <ToggleGroup.Item value="de" className={`${segItem} font-medium`}>Deutsch</ToggleGroup.Item>
+          <ToggleGroup.Item value="en" className={`${segItem} font-medium`}>English</ToggleGroup.Item>
         </ToggleGroup.Root>
         <ToggleGroup.Root type="multiple" value={chunks ? ['chunks'] : []} onValueChange={(v) => set({ chunks: v.includes('chunks') })} className={seg} aria-label="Chunks">
           <ToggleGroup.Item value="chunks" className={segItem}><Boxes size={15} />Chunks</ToggleGroup.Item>
@@ -53,10 +59,10 @@ function SongPicker({ library, item }: { library: LibraryItem[]; item: LibraryIt
   const poems = library.filter((i) => i.kind === 'poem');
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger className="flex cursor-pointer items-center gap-2.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-left text-sm font-semibold data-[state=open]:border-accent">
-        <span className="grid size-[26px] place-items-center rounded-[7px] bg-surface2 text-en"><Music size={14} /></span>
-        <span className="leading-tight">{item.title}<br /><span className="text-xs font-medium text-muted">{item.by} · {item.level}</span></span>
-        <ChevronDown size={14} />
+      <Popover.Trigger className="flex cursor-pointer items-center gap-3.5 rounded-xl border border-line bg-surface px-4 py-2.5 text-left text-lg font-semibold data-[state=open]:border-accent">
+        <span className="grid size-10 place-items-center rounded-[10px] bg-surface2 text-en"><Music size={20} /></span>
+        <span className="leading-tight">{item.title}<br /><span className="text-sm font-medium text-muted">{item.by} · {item.level}</span></span>
+        <ChevronDown size={18} />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content align="start" sideOffset={8} collisionPadding={12}

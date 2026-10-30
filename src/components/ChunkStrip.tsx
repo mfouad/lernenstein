@@ -35,7 +35,8 @@ function ChunkView({ chunk, size, gapBefore }: { chunk: Chunk; size: Size; gapBe
   const { kind, bracket } = chunk;
   const big = size === 'lg';
   const pad = big ? 'rounded-2xl border-2 px-[0.3em] py-[0.15em]' : 'rounded-lg border px-2 py-1';
-  const box = kind === 'link' ? ''
+  // A connector that opens the verb bracket (weil, dass…) is the verb's first part, so it gets the verb box.
+  const box = kind === 'link' ? (bracket ? `${pad} border-(--slot-2) bg-(--lane)` : '')
     : kind === 'verb' || kind === 'verbEnd' ? `${pad} border-(--slot-2) bg-(--lane)`
       : kind === 'subject' ? `${pad} border-(--slot-1)`
         : `${pad} border-line`;

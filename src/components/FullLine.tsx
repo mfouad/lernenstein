@@ -31,7 +31,7 @@ function needsShrink(el: HTMLElement, px: number): boolean {
 
 export function FullLine({ song }: { song: AnalyzedSong }) {
   const { active, pass, goTo } = usePlayback();
-  const { repeat, learned, hideGrammar, hideTranslation, chunks, gstyle } = useSettings();
+  const { repeat, learned, hideGrammar, hideTranslation, chunks, gstyle, main } = useSettings();
   const fitRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [px, setPx] = useState(MAX_PX);
@@ -42,7 +42,7 @@ export function FullLine({ song }: { song: AnalyzedSong }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useLayoutEffect(() => { setPx(MAX_PX); }, [song, active, chunks, gstyle, hideGrammar, hideTranslation, learned, width]);
+  useLayoutEffect(() => { setPx(MAX_PX); }, [song, active, chunks, gstyle, main, hideGrammar, hideTranslation, learned, width]);
   useLayoutEffect(() => {
     const el = fitRef.current;
     if (el && px > MIN_PX && needsShrink(el, px)) {
@@ -55,10 +55,12 @@ export function FullLine({ song }: { song: AnalyzedSong }) {
   const prev = song.lines[active - 1];
   const next = song.lines[active + 1];
   const q = line.question;
+  const de = main === 'de';
+  const translation = <LineTranslation text={line.text} given={line.translation} fallback={line.tokens.filter((t) => t.gloss).map((t) => shortGloss(t.gloss, t.pos)).join(' · ')} />;
   const showQ = q && !hideGrammar && learned.includes(q === 'w' ? 'wQuestion' : 'ynQuestion');
 
   return (
-    <section className="flex min-h-[640px] flex-col rounded-2xl border border-line bg-surface px-6 pb-6 pt-7 md:px-10">
+    <section className="flex min-h-[420px] flex-col rounded-2xl border border-line bg-surface px-6 pb-4 pt-4 md:px-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="eyebrow">Full line</span>
@@ -76,21 +78,21 @@ export function FullLine({ song }: { song: AnalyzedSong }) {
           {line.time != null && ` · ${fmt(line.time)}`}
         </span>
       </div>
-      <LineTranslation text={line.text} given={line.translation} fallback={line.tokens.filter((t) => t.gloss).map((t) => shortGloss(t.gloss, t.pos)).join(' · ')} />
+      {de ? translation : <p className="m-0 mt-2.5 text-xl text-muted md:text-2xl">{line.text}</p>}
 
-      <p className="mt-8 min-h-6 text-[15px] font-semibold text-faint">
+      <p className="mt-3 min-h-6 text-[15px] font-semibold text-faint">
         {prev && <><span className="mr-2.5 font-mono text-[10px] tracking-widest">PREV</span>{prev.text}</>}
       </p>
-      <div className="flex flex-1 items-center py-10">
+      <div className="flex flex-1 items-center py-4">
         <div ref={fitRef} className="w-full min-w-0" style={{ '--word-size': `${px}px` } as CSSProperties}>
           <ChunkStrip key={active} tokens={line.tokens} size="lg" />
         </div>
       </div>
-      <p className="mb-5 min-h-6 text-[15px] font-semibold text-faint">
+      <p className="mb-3 min-h-6 text-[15px] font-semibold text-faint">
         {next && <><span className="mr-2.5 font-mono text-[10px] tracking-widest">NEXT</span>{next.text}</>}
       </p>
 
-      <div className="mb-4 flex items-center gap-[3px]" aria-label={`Song progress, line ${active + 1} of ${song.lines.length}`}>
+      <div className="mb-3 flex items-center gap-[3px]" aria-label={`Song progress, line ${active + 1} of ${song.lines.length}`}>
         {song.lines.map((l, i) => (
           <button key={i} type="button" aria-label={`Go to line ${i + 1}`} onClick={() => goTo(i, l.time)}
             className={`flex-1 cursor-pointer rounded-sm ${i === active ? 'h-2 bg-accent' : i < active ? 'h-1 bg-line2' : 'h-1 bg-line'}`} />
@@ -105,7 +107,7 @@ function Legend({ pos }: { pos: Pos[] }) {
   const { gstyle, hideGrammar } = useSettings();
   if (hideGrammar) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-t border-line pt-4 text-[13px] text-muted">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-t border-line pt-3 text-[13px] text-muted">
       <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-faint">GRAMMAR</span>
       {pos.map((p) => (
         <span key={p} className="flex items-center gap-2" style={{ '--c': `var(--pos-${p})` } as CSSProperties}>

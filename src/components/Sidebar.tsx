@@ -3,9 +3,8 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import { CircleCheck, EyeOff, Languages, List, Sparkles, Tag, X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { FORM_INFO, FORM_ORDER } from '../lib/grammar.ts';
 import { useSettings, wordKey, type View } from '../store/settings.ts';
-import type { AnalyzedSong, FormKey } from '../types.ts';
+import type { AnalyzedSong } from '../types.ts';
 
 const card = 'rounded-2xl border border-line bg-surface p-[18px]';
 
@@ -20,35 +19,21 @@ export function ShowCard() {
   return (
     <section className={card}>
       <span className="eyebrow">Show</span>
-      <ToggleGroup.Root type="single" value={view} onValueChange={(v) => v && set({ view: v as View })}
-        className="mt-3 grid grid-cols-2 gap-1 rounded-[10px] border border-line bg-bg p-[3px]">
-        {views.map(([v, label, icon]) => (
-          <ToggleGroup.Item key={v} value={v}
-            className="flex cursor-pointer items-center gap-2 rounded-[7px] px-2.5 py-2 text-[13px] font-medium text-muted data-[state=on]:bg-surface2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_0_0_1px_var(--line2)]">
-            {icon}{label}
-          </ToggleGroup.Item>
-        ))}
-      </ToggleGroup.Root>
-      <div className="mt-2">
-        <SwitchRow icon={<Languages size={15} className="text-en" />} label="Hide translation" checked={hideTranslation} onChange={(v) => set({ hideTranslation: v })} />
-        <SwitchRow icon={<EyeOff size={15} style={{ color: 'var(--pos-N)' }} />} label="Hide grammar" checked={hideGrammar} onChange={(v) => set({ hideGrammar: v })} border />
+      <div className="mt-3 grid items-center gap-x-8 gap-y-3 md:grid-cols-2">
+        <ToggleGroup.Root type="single" value={view} onValueChange={(v) => v && set({ view: v as View })}
+          className="grid grid-cols-2 gap-1 rounded-[10px] border border-line bg-bg p-[3px]">
+          {views.map(([v, label, icon]) => (
+            <ToggleGroup.Item key={v} value={v}
+              className="flex cursor-pointer items-center gap-2 rounded-[7px] px-2.5 py-2 text-[13px] font-medium text-muted data-[state=on]:bg-surface2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_0_0_1px_var(--line2)]">
+              {icon}{label}
+            </ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
+        <div>
+          <SwitchRow icon={<Languages size={15} className="text-en" />} label="Hide translation" checked={hideTranslation} onChange={(v) => set({ hideTranslation: v })} />
+          <SwitchRow icon={<EyeOff size={15} style={{ color: 'var(--pos-N)' }} />} label="Hide grammar" checked={hideGrammar} onChange={(v) => set({ hideGrammar: v })} border />
+        </div>
       </div>
-    </section>
-  );
-}
-
-export function FormsCard({ song }: { song: AnalyzedSong | undefined }) {
-  const { learned, toggleForm } = useSettings();
-  const counts = new Map<FormKey, number>();
-  song?.lines.forEach((l) => l.tokens.forEach((t) => t.forms.forEach((f) => counts.set(f, (counts.get(f) ?? 0) + 1))));
-  return (
-    <section className={card}>
-      <span className="eyebrow">Forms I've learned</span>
-      <p className="mb-1.5 mt-2 text-[13px] text-muted">Only these get highlighted. Everything else stays plain until you're ready.</p>
-      {FORM_ORDER.map((f, i) => (
-        <SwitchRow key={f} border={i > 0} checked={learned.includes(f)} onChange={() => toggleForm(f)}
-          label={<>{FORM_INFO[f].name} <span className="ml-1 font-mono text-[11px] text-faint">{counts.get(f) ?? 0}×</span></>} />
-      ))}
     </section>
   );
 }

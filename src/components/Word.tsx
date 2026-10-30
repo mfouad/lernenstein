@@ -26,6 +26,9 @@ export function Word({ token, size }: { token: Token; size: 'lg' | 'sm' }) {
   const showColor = !quiet && s.gstyle === 'color';
   const underline = !quiet && s.gstyle === 'underline' ? UNDERLINE[token.pos] : undefined;
   const big = size === 'lg';
+  // English mode swaps the two lines: the gloss is the main word, the German sits below.
+  const en = s.main === 'en';
+  const gloss = token.gloss ? shortGloss(token.gloss, token.pos) : '—';
 
   return (
     <HoverCard.Root openDelay={120} closeDelay={150}>
@@ -42,10 +45,10 @@ export function Word({ token, size }: { token: Token; size: 'lg' | 'sm' }) {
             className={`font-extrabold tracking-tight leading-none ${big ? 'text-(length:--word-size,3.75rem)' : 'text-xl'} ${showColor ? 'text-(--c)' : ''}`}
             style={underline ? { textDecorationLine: 'underline', textDecorationStyle: underline as CSSProperties['textDecorationStyle'], textDecorationColor: 'var(--c)', textDecorationThickness: big ? 4 : 2, textUnderlineOffset: big ? 12 : 5 } : undefined}
           >
-            {token.text}
+            {en ? gloss : token.text}
           </span>
           {!s.hideTranslation && (
-            <span className={`font-semibold ${big ? 'text-[max(0.75rem,0.34em)]' : 'text-xs'} ${showColor || underline ? 'text-muted' : 'text-en'}`}>{token.gloss ? shortGloss(token.gloss, token.pos) : '—'}</span>
+            <span className={`font-semibold ${big ? 'text-[max(0.75rem,0.34em)]' : 'text-xs'} ${showColor || underline ? 'text-muted' : 'text-en'}`}>{en ? token.text : gloss}</span>
           )}
           {(known || saved) && (
             <span className="absolute -right-1 -top-1 flex gap-0.5 group-hover:opacity-0">
