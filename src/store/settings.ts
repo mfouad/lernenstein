@@ -4,11 +4,12 @@ import { FORM_ORDER } from '../lib/grammar.ts';
 import type { SyncPoint } from '../lib/sync.ts';
 import type { FormKey, Pos } from '../types.ts';
 
-export type Mode = 'line' | 'table';
+export type Mode = 'line' | 'table' | 'quiz';
 export type MainLang = 'de' | 'en';
-export type GrammarStyle = 'color' | 'underline' | 'chips';
+export type GrammarStyle = 'plain' | 'color' | 'underline' | 'chips';
 export type View = 'all' | 'new' | 'known' | 'nv';
 export type Theme = 'dark' | 'light';
+export type GlossSize = 0 | 1 | 2;
 
 export interface SavedWord {
   key: string; // lemma, lowercased
@@ -27,6 +28,7 @@ interface State {
   chunks: boolean; // group words into chunks with the verb bracket
   view: View;
   hideTranslation: boolean;
+  glossSize: GlossSize; // size of the word glosses in both views
   hideGrammar: boolean;
   translateLines: boolean;
   learned: FormKey[];
@@ -52,6 +54,7 @@ export const useSettings = create<State>()(
       chunks: true,
       view: 'all',
       hideTranslation: false,
+      glossSize: 1,
       hideGrammar: false,
       translateLines: false,
       learned: FORM_ORDER,

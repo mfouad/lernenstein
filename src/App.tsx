@@ -1,20 +1,18 @@
-import { useEffect } from 'react';
-import raw from '../data/library.json';
+import { useEffect, useMemo } from 'react';
 import { FullLine } from './components/FullLine.tsx';
 import { Header } from './components/Header.tsx';
 import { LyricsTable } from './components/LyricsTable.tsx';
 import { PlayerCard } from './components/PlayerCard.tsx';
 import { MyWordsCard, ShowCard } from './components/Sidebar.tsx';
-import { loadLibrary, type RawLibrary } from './data/library.ts';
 import { useSong } from './hooks/useSong.ts';
 import { persistStorage } from './sources/db.ts';
+import { currentLibrary } from './studio/draft.ts';
 import { usePlayback } from './store/playback.ts';
 import { useSettings } from './store/settings.ts';
 
-const library = loadLibrary(raw as RawLibrary);
-
 export default function App() {
   const { slug, theme, mode } = useSettings();
+  const library = useMemo(currentLibrary, []);
   const item = library.find((i) => i.slug === slug && i.source !== 'link') ?? library[0];
   const { analysis, loading, failed } = useSong(item);
   const song = analysis.data;
@@ -47,7 +45,7 @@ export default function App() {
               {item.lyricsUrl && <a className="text-accent underline" href={item.lyricsUrl} target="_blank" rel="noreferrer">Open the source</a>}
             </Status>
           )}
-          {song && (mode === 'line' ? <FullLine song={song} /> : <LyricsTable song={song} />)}
+          {song && (mode === 'table' ? <LyricsTable song={song} /> : <FullLine song={song} />)}
           <div className="mt-4"><ShowCard /></div>
         </main>
         <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">

@@ -2,11 +2,13 @@ import type { CSSProperties } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { shortGloss } from '../lib/gloss.ts';
 import { POS_INFO, UNDERLINE } from '../lib/grammar.ts';
+import { buildQuiz } from '../lib/quiz.ts';
 import { useSettings } from '../store/settings.ts';
 import { usePlayback } from '../store/playback.ts';
 import type { AnalyzedSong, Pos } from '../types.ts';
 import { LineTranslation } from './LineTranslation.tsx';
 import { ChunkStrip } from './ChunkStrip.tsx';
+import { QuizOptions } from './QuizOptions.tsx';
 
 // The big words shrink in steps until the line fits: on one row if that's
 // possible above ONE_ROW_PX, otherwise no taller than FIT_HEIGHT, and never
@@ -31,7 +33,11 @@ function needsShrink(el: HTMLElement, px: number): boolean {
 
 export function FullLine({ song }: { song: AnalyzedSong }) {
   const { active, pass, goTo } = usePlayback();
-  const { repeat, learned, hideGrammar, hideTranslation, chunks, gstyle, main } = useSettings();
+  const solved = usePlayback((s) => !!s.solved[s.active]);
+  const { mode, repeat, learned, hideGrammar: grammarOff, hideTranslation, chunks, gstyle, main } = useSettings();
+  const quiz = mode === 'quiz';
+  const question = quiz ? buildQuiz(song)[active] ?? null : null;
+  const hideGrammar = grammarOff || gstyle === 'plain';
   const fitRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [px, setPx] = useState(MAX_PX);
@@ -60,10 +66,10 @@ export function FullLine({ song }: { song: AnalyzedSong }) {
   const showQ = q && !hideGrammar && learned.includes(q === 'w' ? 'wQuestion' : 'ynQuestion');
 
   return (
-    <section className="flex min-h-[420px] flex-col rounded-2xl border border-line bg-surface px-6 pb-4 pt-4 md:px-10">
+    <section className={`flex flex-col rounded-2xl border border-line bg-surface px-6 pb-4 pt-4 md:px-10 ${quiz ? 'h-[560px]' : 'min-h-[420px]'}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="eyebrow">Full line</span>
+          <span className="eyebrow">{quiz ? 'Quiz' : 'Full line'}</span>
           {showQ && (
             <span className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 pl-1 text-xs font-semibold"
               style={{ borderColor: `var(--slot-${q === 'w' ? 1 : 2})`, color: `var(--slot-${q === 'w' ? 1 : 2})` }}>
@@ -78,17 +84,18 @@ export function FullLine({ song }: { song: AnalyzedSong }) {
           {line.time != null && ` · ${fmt(line.time)}`}
         </span>
       </div>
-      {de ? translation : <p className="m-0 mt-2.5 text-xl text-muted md:text-2xl">{line.text}</p>}
+      {!quiz && (de ? translation : <p className="m-0 mt-2.5 text-xl text-muted md:text-2xl">{line.text}</p>)}
 
-      <p className="mt-3 min-h-6 text-[15px] font-semibold text-faint">
+      <p className={`mt-3 min-h-6 text-[15px] font-semibold text-faint ${quiz ? 'hidden' : ''}`}>
         {prev && <><span className="mr-2.5 font-mono text-[10px] tracking-widest">PREV</span>{prev.text}</>}
       </p>
-      <div className="flex flex-1 items-center py-4">
+      <div className={`flex items-center py-4 ${quiz ? 'h-[330px] shrink-0 justify-center overflow-hidden' : 'flex-1'}`}>
         <div ref={fitRef} className="w-full min-w-0" style={{ '--word-size': `${px}px` } as CSSProperties}>
-          <ChunkStrip key={active} tokens={line.tokens} size="lg" />
+          <ChunkStrip key={active} tokens={line.tokens} size="lg" blank={question && !solved ? line.tokens[question.index] : undefined} center={quiz} />
         </div>
       </div>
-      <p className="mb-3 min-h-6 text-[15px] font-semibold text-faint">
+      {quiz && <div className="mb-3 flex-1"><QuizOptions line={active} question={question} solved={solved} /></div>}
+      <p className={`mb-3 min-h-6 text-[15px] font-semibold text-faint ${quiz ? 'hidden' : ''}`}>
         {next && <><span className="mr-2.5 font-mono text-[10px] tracking-widest">NEXT</span>{next.text}</>}
       </p>
 
@@ -105,7 +112,7 @@ export function FullLine({ song }: { song: AnalyzedSong }) {
 
 function Legend({ pos }: { pos: Pos[] }) {
   const { gstyle, hideGrammar } = useSettings();
-  if (hideGrammar) return null;
+  if (hideGrammar || gstyle === 'plain') return null;
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-t border-line pt-3 text-[13px] text-muted">
       <span className="font-mono text-[10px] font-bold tracking-[0.14em] text-faint">GRAMMAR</span>

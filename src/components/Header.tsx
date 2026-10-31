@@ -1,38 +1,50 @@
 import * as Popover from '@radix-ui/react-popover';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import { Boxes, Check, ChevronDown, ExternalLink, Moon, Music, Rows3, Sun, TextQuote } from 'lucide-react';
+import { Boxes, Check, ChevronDown, CircleHelp, ExternalLink, LayoutGrid, Moon, Music, Pencil, Rows3, Sun, TextQuote } from 'lucide-react';
 import { useState } from 'react';
+import { isLocal, studioHref } from '../lib/route.ts';
 import { usePlayback } from '../store/playback.ts';
-import { useSettings, type GrammarStyle, type MainLang, type Mode } from '../store/settings.ts';
+import { useSettings, type GlossSize, type GrammarStyle, type MainLang, type Mode } from '../store/settings.ts';
 import type { LibraryItem } from '../types.ts';
 
 const seg = 'flex items-center gap-0.5 rounded-[10px] border border-line bg-surface p-[3px]';
 const segItem = 'flex cursor-pointer items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[13px] font-semibold text-muted data-[state=on]:bg-surface2 data-[state=on]:text-ink data-[state=on]:shadow-[inset_0_0_0_1px_var(--line2)]';
 
+const navLink = 'flex h-9 items-center gap-1.5 rounded-[10px] border border-line2 bg-surface2 px-3 text-[13px] font-semibold text-ink no-underline';
+
 export function Header({ library, item }: { library: LibraryItem[]; item: LibraryItem }) {
-  const { mode, gstyle, main, chunks, theme, set } = useSettings();
+  const { mode, gstyle, main, chunks, glossSize, theme, set } = useSettings();
   return (
     <header className="border-b border-line">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-stretch gap-x-5 gap-y-3 px-4 py-3.5 md:px-7">
         <div className="flex items-center py-1 text-[44px] font-extrabold leading-none tracking-tight">Lernen<span className="text-en">stein</span></div>
         <div className="flex-1" />
         <SongPicker library={library} item={item} />
+        <a href="#/library" className={`${navLink} self-center`}><LayoutGrid size={15} />Library</a>
+        {isLocal && <a href={studioHref(item.slug)} className={`${navLink} self-center`} title="Edit this entry in the Studio"><Pencil size={15} />Edit</a>}
       </div>
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-4 pb-3.5 md:px-7">
-        <ToggleGroup.Root type="single" value={mode} onValueChange={(v) => v && set({ mode: v as Mode })} className={seg} aria-label="Mode">
+        <ToggleGroup.Root type="single" value={mode} onValueChange={(v) => v && set(v === 'quiz' ? { mode: 'quiz', repeat: 0, speed: 0.9, pause: 2 } : { mode: v as Mode })} className={seg} aria-label="Mode">
           <ToggleGroup.Item value="line" className={segItem}><TextQuote size={15} />Full line</ToggleGroup.Item>
           <ToggleGroup.Item value="table" className={segItem}><Rows3 size={15} />Lyrics table</ToggleGroup.Item>
+          <ToggleGroup.Item value="quiz" className={segItem}><CircleHelp size={15} />Quiz</ToggleGroup.Item>
         </ToggleGroup.Root>
         <ToggleGroup.Root type="single" value={gstyle} onValueChange={(v) => v && set({ gstyle: v as GrammarStyle })} className={seg} aria-label="Grammar style">
           <span className="px-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint">Style</span>
-          {(['color', 'underline', 'chips'] as const).map((s) => (
+          {(['plain', 'color', 'underline', 'chips'] as const).map((s) => (
             <ToggleGroup.Item key={s} value={s} className={`${segItem} font-medium capitalize`}>{s}</ToggleGroup.Item>
           ))}
         </ToggleGroup.Root>
         <ToggleGroup.Root type="single" value={main} onValueChange={(v) => v && set({ main: v as MainLang })} className={seg} aria-label="Main language">
           <ToggleGroup.Item value="de" className={`${segItem} font-medium`}>Deutsch</ToggleGroup.Item>
           <ToggleGroup.Item value="en" className={`${segItem} font-medium`}>English</ToggleGroup.Item>
+        </ToggleGroup.Root>
+        <ToggleGroup.Root type="single" value={String(glossSize)} onValueChange={(v) => v && set({ glossSize: Number(v) as GlossSize })} className={seg} aria-label="Gloss size">
+          <span className="px-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint">Gloss</span>
+          {([['0', 'Small gloss size', 'text-xs'], ['1', 'Medium gloss size', 'text-sm'], ['2', 'Large gloss size', 'text-lg']] as const).map(([v, label, cls]) => (
+            <ToggleGroup.Item key={v} value={v} aria-label={label} title={label} className={`${segItem} px-2.5 py-1 font-bold ${cls}`}>A</ToggleGroup.Item>
+          ))}
         </ToggleGroup.Root>
         <ToggleGroup.Root type="multiple" value={chunks ? ['chunks'] : []} onValueChange={(v) => set({ chunks: v.includes('chunks') })} className={seg} aria-label="Chunks">
           <ToggleGroup.Item value="chunks" className={segItem}><Boxes size={15} />Chunks</ToggleGroup.Item>
@@ -52,7 +64,7 @@ function SongPicker({ library, item }: { library: LibraryItem[]; item: LibraryIt
   const pick = (i: LibraryItem) => {
     if (i.source === 'link') { if (i.lyricsUrl) window.open(i.lyricsUrl, '_blank', 'noopener'); return; }
     set({ slug: i.slug });
-    usePlayback.getState().set({ active: 0, pass: 0, seekTo: null, time: 0, playing: false });
+    usePlayback.getState().set({ active: 0, pass: 0, seekTo: null, solved: {}, time: 0, playing: false });
     setOpen(false);
   };
   const songs = library.filter((i) => i.kind === 'song');

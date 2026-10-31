@@ -1,3 +1,5 @@
+import type { SyncPoint } from './lib/sync.ts';
+
 // Parts of speech shown in the UI.
 export type Pos =
   | 'N' | 'V' | 'AUX' | 'MOD' | 'PRON' | 'ADJ' | 'ADV'
@@ -58,4 +60,5 @@ export interface LibraryItem {
   genre?: string;
   level: string;
   why_it_works: string;
+  sync?: SyncPoint[]; // default sync points shipped with the entry
 }

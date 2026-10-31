@@ -1,6 +1,7 @@
 import { Clock, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
+import { buildQuiz } from '../lib/quiz.ts';
 import { addPoint, lineToVideo, videoToLine, type SyncPoint } from '../lib/sync.ts';
 import { usePlayback } from '../store/playback.ts';
 import { useSettings } from '../store/settings.ts';
@@ -9,11 +10,13 @@ import { fmt } from './FullLine.tsx';
 
 export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSong | undefined }) {
   const player = useRef<YouTubePlayer | null>(null);
-  const { repeat, speed, pause, set } = useSettings();
-  const points = useSettings((s) => s.syncs[item.slug]) ?? NO_POINTS;
+  const { repeat, speed, pause, mode, set } = useSettings();
+  // Points saved on this device win over the ones shipped with the library.
+  const points = useSettings((s) => s.syncs[item.slug]) ?? item.sync ?? NO_POINTS;
   const { active, time, playing, seekTo, goTo } = usePlayback();
   const pausedAt = useRef('');
   const resume = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const replayAt = useRef(0);
   const synced = song?.lines[0]?.time != null;
 
   // Follow the video: pick the active line, and replay it while repeating.
@@ -22,7 +25,7 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
     const id = setInterval(async () => {
       const p = player.current;
       if (!p) return;
-      const pts = useSettings.getState().syncs[item.slug] ?? NO_POINTS;
+      const pts = useSettings.getState().syncs[item.slug] ?? item.sync ?? NO_POINTS;
       const t = videoToLine(await p.getCurrentTime(), pts);
       const pb = usePlayback.getState();
       pb.set({ time: t });
@@ -30,7 +33,22 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       const lines = song.lines;
       const cur = lines[pb.active];
       const nextTime = lines[pb.active + 1]?.time;
-      const reps = useSettings.getState().repeat;
+      const quiz = useSettings.getState().mode === 'quiz';
+      const reps = quiz ? 0 : useSettings.getState().repeat; // quiz mode has no repeat
+      // Quiz: a line that ends with its word not picked plays again, after the pause.
+      if (quiz && cur?.time != null && nextTime != null && t >= nextTime - 0.05 && t < nextTime + 1.5
+        && buildQuiz(song)[pb.active] && !pb.solved[pb.active]) {
+        if (Date.now() - replayAt.current < 1000) return; // the seek hasn't shown up in the time yet
+        replayAt.current = Date.now();
+        p.seekTo(lineToVideo(cur.time, pts), true);
+        const secs = useSettings.getState().pause;
+        if (secs > 0) {
+          p.pauseVideo();
+          clearTimeout(resume.current);
+          resume.current = setTimeout(() => p.playVideo(), secs * 1000);
+        }
+        return;
+      }
       if (cur?.time != null && nextTime != null && t >= nextTime - 0.05 && t < nextTime + 1.5 && pb.pass < reps) {
         p.seekTo(lineToVideo(cur.time, pts), true);
         pb.set({ pass: pb.pass + 1 });
@@ -51,14 +69,14 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       if (idx !== pb.active) pb.set({ active: idx, pass: 0 });
     }, 200);
     return () => { clearInterval(id); clearTimeout(resume.current); };
-  }, [song, synced, item.slug]);
+  }, [song, synced, item.slug, item.sync]);
 
   // Seeks requested elsewhere (clicking a line, prev/next).
   useEffect(() => {
     if (seekTo == null) return;
-    player.current?.seekTo(lineToVideo(seekTo, useSettings.getState().syncs[item.slug] ?? NO_POINTS), true);
+    player.current?.seekTo(lineToVideo(seekTo, useSettings.getState().syncs[item.slug] ?? item.sync ?? NO_POINTS), true);
     usePlayback.getState().set({ seekTo: null });
-  }, [seekTo, item.slug]);
+  }, [seekTo, item.slug, item.sync]);
 
   useEffect(() => { player.current?.setPlaybackRate(speed); }, [speed]);
 
@@ -111,7 +129,7 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
           <div className="grid size-full place-items-center p-6 text-center text-sm text-[#c9d1df]">No video for this item yet.</div>
         )}
       </div>
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex items-center justify-center gap-2">
         <IconButton label="Previous line" onClick={() => step(-1)}><SkipBack size={15} fill="currentColor" /></IconButton>
         <button type="button" aria-label={playing ? 'Pause' : 'Play'} onClick={toggle} disabled={!item.youtubeId}
           className="grid size-11 cursor-pointer place-items-center rounded-full bg-ink text-bg disabled:opacity-40">
@@ -122,7 +140,7 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       </div>
       <div className="mt-3 grid gap-2.5">
         <OptionRow label="Repeat">
-          <Options value={repeat} options={[[0, 'Off'], [1, '1×'], [2, '2×'], [3, '3×']]} onChange={(v) => set({ repeat: v })} aria="Repeat each line" />
+          <Options value={mode === 'quiz' ? 0 : repeat} options={[[0, 'Off'], [1, '1×'], [2, '2×'], [3, '3×']]} onChange={(v) => set({ repeat: v })} aria="Repeat each line" disabled={mode === 'quiz'} />
         </OptionRow>
         <OptionRow label="Speed">
           <Options value={speed} options={SPEEDS.map((v) => [v, `${v}x`] as const)} onChange={(v) => set({ speed: v })} aria="Playback speed" mono />
@@ -183,12 +201,12 @@ function OptionRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function Options<T extends number>({ value, options, onChange, aria, mono }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; aria: string; mono?: boolean }) {
+function Options<T extends number>({ value, options, onChange, aria, mono, disabled }: { value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void; aria: string; mono?: boolean; disabled?: boolean }) {
   return (
     <div role="group" aria-label={aria} className="flex overflow-hidden rounded-[10px] border border-line2">
       {options.map(([v, label]) => (
-        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)}
-          className={`h-8 cursor-pointer px-2.5 text-xs ${mono ? 'font-mono' : ''} ${value === v ? 'bg-accent font-bold text-bg' : 'bg-surface2 text-muted'}`}>
+        <button key={v} type="button" aria-pressed={value === v} disabled={disabled} onClick={() => onChange(v)}
+          className={`h-8 cursor-pointer px-2.5 text-xs disabled:cursor-default disabled:opacity-50 ${mono ? 'font-mono' : ''} ${value === v ? 'bg-accent font-bold text-bg' : 'bg-surface2 text-muted'}`}>
           {label}
         </button>
       ))}

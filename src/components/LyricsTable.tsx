@@ -10,10 +10,10 @@ import { ChunkStrip } from './ChunkStrip.tsx';
 // Every line as a chunk strip (see ChunkStrip), with its translation below.
 export function LyricsTable({ song }: { song: AnalyzedSong }) {
   const { active, goTo } = usePlayback();
-  const { learned, hideGrammar, chunks } = useSettings();
+  const { learned, hideGrammar, chunks, gstyle } = useSettings();
   const activeRef = useRef<HTMLDivElement>(null);
   useEffect(() => { activeRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [active]);
-  const marks = !hideGrammar;
+  const marks = !hideGrammar && gstyle !== 'plain';
 
   return (
     <section className="rounded-2xl border border-line bg-surface px-6 pb-3 pt-6">
