@@ -1,6 +1,7 @@
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import { ExternalLink, Moon, Music, Pencil, Play, Plus, Sun } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { PitchCarousel } from './PitchCarousel.tsx';
 import { playInApp } from '../lib/play.ts';
 import { isLocal, studioHref } from '../lib/route.ts';
 import { addDraftItem, currentLibrary } from '../studio/draft.ts';
@@ -16,7 +17,7 @@ const label = (i: LibraryItem, g: Group) =>
 
 export default function LibraryPage() {
   const { theme, set } = useSettings();
-  const [group, setGroup] = useState<Group>('level');
+  const [group, setGroup] = useState<Group>('genre');
   const [query, setQuery] = useState('');
   const items = useMemo(currentLibrary, []);
 
@@ -63,6 +64,7 @@ export default function LibraryPage() {
         </div>
       </header>
       <main className="mx-auto max-w-[1440px] px-4 pb-12 pt-6 md:px-7">
+        <PitchCarousel />
         {sections.length === 0 && <p className="text-muted">Nothing matches.</p>}
         {sections.map(([name, list]) => (
           <section key={name} className="mb-8" aria-label={name}>

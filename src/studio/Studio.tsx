@@ -91,8 +91,8 @@ export default function Studio({ slug: wanted }: { slug?: string }) {
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-3 px-4 py-3.5 md:px-7">
           <div className="text-[28px] font-extrabold leading-none tracking-tight">Lernen<span className="text-en">stein</span> <span className="font-mono text-sm font-semibold uppercase tracking-widest text-faint">Studio</span></div>
-          <a href="#/" className="text-sm text-accent underline">Back to the app</a>
-          <a href="#/library" className="text-sm text-accent underline">Library</a>
+          <a href="#/play" className="text-sm text-accent underline">Back to the app</a>
+          <a href="#/" className="text-sm text-accent underline">Library</a>
           <div className="flex-1" />
           {note && <span role="status" className="text-sm text-good">{note}</span>}
           <span className="font-mono text-xs text-muted">{items.length} entries{dirty ? ' · edited' : ''}</span>

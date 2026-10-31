@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { FullLine, Score } from '../components/FullLine.tsx';
 import { modePatch } from '../components/Header.tsx';
 import { LyricsTable } from '../components/LyricsTable.tsx';
+import { PitchCarousel } from '../components/PitchCarousel.tsx';
 import { PlayerCard } from '../components/PlayerCard.tsx';
 import { MyWordsCard, ShowCard } from '../components/Sidebar.tsx';
 import { QUIZ_RESET, usePlayback } from '../store/playback.ts';
@@ -94,18 +95,25 @@ function PlayMode({ item, song, loading, failed, onBack }: Omit<Props, 'library'
 }
 
 function MobileLibrary({ library, current, onOpen }: { library: LibraryItem[]; current: string; onOpen: (i: LibraryItem) => void }) {
-  const [kind, setKind] = useState<'song' | 'poem'>('song');
   const [query, setQuery] = useState('');
   const q = query.toLowerCase();
-  const list = library.filter((i) => i.kind === kind && (!q || `${i.title} ${i.by}`.toLowerCase().includes(q)));
+  const sections = new Map<string, LibraryItem[]>();
+  for (const i of library) {
+    if (q && !`${i.title} ${i.by}`.toLowerCase().includes(q)) continue;
+    const g = i.genre || (i.kind === 'poem' ? 'Poems' : 'No genre');
+    sections.set(g, [...(sections.get(g) ?? []), i]);
+  }
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+      <PitchCarousel />
       <label className="flex h-11 items-center gap-2 rounded-xl border border-line2 bg-surface2 px-3 text-muted">
         <Search size={16} />
         <input aria-label="Search the library" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none" />
       </label>
-      <Segmented label="Type" value={kind} onChange={setKind} options={[['song', 'Songs'], ['poem', 'Poems']]} />
-      {list.length === 0 && <p className="m-0 text-muted">Nothing matches.</p>}
+      {sections.size === 0 && <p className="m-0 text-muted">Nothing matches.</p>}
+      {[...sections].map(([name, list]) => (
+      <section key={name} aria-label={name} className="grid grid-cols-[minmax(0,1fr)] gap-2">
+      <h2 className="m-0 mt-1 text-base font-bold">{name} <span className="font-mono text-xs font-normal text-muted">{list.length}</span></h2>
       <ul className="m-0 grid list-none grid-cols-[minmax(0,1fr)] gap-2 p-0">
         {list.map((i) => (
           <li key={i.slug}>
@@ -121,6 +129,8 @@ function MobileLibrary({ library, current, onOpen }: { library: LibraryItem[]; c
           </li>
         ))}
       </ul>
+      </section>
+      ))}
     </div>
   );
 }
@@ -148,7 +158,7 @@ function ModeSheet({ item, onStart, onClose }: { item: LibraryItem; onStart: (mo
         <div className="grid gap-2.5">
           <div className="grid gap-2 rounded-2xl border border-accent bg-surface2 p-3">
             <div className="flex items-center gap-2 font-semibold"><CircleHelp size={20} className="text-accent" />Quiz</div>
-            <Segmented label="Quiz style" value={style} onChange={setStyle} options={[['flow', 'Flow'], ['retry', 'Repeat each line']]} />
+            <Segmented label="Quiz style" value={style} onChange={setStyle} options={[['flow', 'Flow'], ['retry', 'Repeat'], ['memory', 'Memory']]} />
             <button type="button" onClick={() => onStart('quiz', style)} className="h-11 cursor-pointer rounded-xl bg-accent text-sm font-bold text-bg">Start quiz</button>
           </div>
           <button type="button" onClick={() => onStart('line', style)} className={choice}><TextQuote size={20} className="text-accent" /><span className="font-semibold">Line by line</span></button>

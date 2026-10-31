@@ -39,6 +39,7 @@ function needsShrink(el: HTMLElement, px: number, limit: number): boolean {
 export function FullLine({ song, bare, onExit }: { song: AnalyzedSong; bare?: boolean; onExit?: () => void }) {
   const { active, pass, goTo } = usePlayback();
   const solved = usePlayback((s) => !!s.solved[s.active]);
+  const hinted = usePlayback((s) => !!s.hints[s.active]);
   const { mode, quizStyle, set, repeat, learned, hideGrammar: grammarOff, hideTranslation, chunks, gstyle, main } = useSettings();
   const quiz = mode === 'quiz';
   const question = quiz ? buildQuiz(song)[active] ?? null : null;
@@ -61,6 +62,16 @@ export function FullLine({ song, bare, onExit }: { song: AnalyzedSong; bare?: bo
     }
   });
 
+  // Memory quiz: a right answer moves on to the next line that has a question.
+  const advance = quiz && quizStyle === 'memory' ? () => {
+    const pb = usePlayback.getState();
+    if (pb.active !== active) return;
+    const qs = buildQuiz(song);
+    let i = active + 1;
+    while (i < song.lines.length && !qs[i]) i++;
+    if (i < song.lines.length) pb.goTo(i, null); else pb.set({ finished: true });
+  } : undefined;
+
   const line = song.lines[active];
   if (!line) return null;
   const prev = song.lines[active - 1];
@@ -76,10 +87,10 @@ export function FullLine({ song, bare, onExit }: { song: AnalyzedSong; bare?: bo
         {!quiz && (de ? translation : <p className="m-0 text-lg text-muted">{line.text}</p>)}
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
           <div ref={fitRef} className="w-full min-w-0" style={{ '--word-size': `${px}px` } as CSSProperties}>
-            <ChunkStrip key={active} tokens={line.tokens} size="lg" blank={question && !solved ? line.tokens[question.index] : undefined} center={quiz} />
+            <ChunkStrip key={active} tokens={line.tokens} size="lg" blank={question && !solved ? line.tokens[question.index] : undefined} center={quiz} hint={hinted} />
           </div>
         </div>
-        {quiz && <div className="pt-2"><QuizOptions line={active} question={question} solved={solved} /></div>}
+        {quiz && <div className="pt-2"><QuizOptions line={active} question={question} solved={solved} advance={advance} /></div>}
         {quiz && <Summary song={song} onExit={onExit} />}
       </div>
     );
@@ -92,7 +103,7 @@ export function FullLine({ song, bare, onExit }: { song: AnalyzedSong; bare?: bo
           <span className="eyebrow">{quiz ? 'Quiz' : 'Full line'}</span>
           {quiz && (
             <div role="group" aria-label="Quiz style" className="flex overflow-hidden rounded-[10px] border border-line2">
-              {([['flow', 'Flow', 'The song keeps playing; pick fast'], ['retry', 'Line by line', 'The line repeats until you get it']] as const).map(([v, label, hint]) => (
+              {([['flow', 'Flow', 'The song keeps playing; pick fast'], ['retry', 'Line by line', 'The line repeats until you get it'], ['memory', 'Memory', 'No song: fill the words from memory, line by line']] as const).map(([v, label, hint]) => (
                 <button key={v} type="button" title={hint} aria-pressed={quizStyle === v} onClick={() => set({ quizStyle: v })}
                   className={`h-7 cursor-pointer px-2.5 text-xs ${quizStyle === v ? 'bg-accent font-bold text-bg' : 'bg-surface2 text-muted'}`}>{label}</button>
               ))}
@@ -123,10 +134,10 @@ export function FullLine({ song, bare, onExit }: { song: AnalyzedSong; bare?: bo
       <div className={quiz ? 'flex flex-1 flex-col justify-center' : 'contents'}>
         <div className={`flex items-center py-4 ${quiz ? 'h-[300px] shrink-0 justify-center overflow-hidden' : 'flex-1'}`}>
           <div ref={fitRef} className="w-full min-w-0" style={{ '--word-size': `${px}px` } as CSSProperties}>
-            <ChunkStrip key={active} tokens={line.tokens} size="lg" blank={question && !solved ? line.tokens[question.index] : undefined} center={quiz} />
+            <ChunkStrip key={active} tokens={line.tokens} size="lg" blank={question && !solved ? line.tokens[question.index] : undefined} center={quiz} hint={hinted} />
           </div>
         </div>
-        {quiz && <div className="mb-3"><QuizOptions line={active} question={question} solved={solved} /></div>}
+        {quiz && <div className="mb-3"><QuizOptions line={active} question={question} solved={solved} advance={advance} /></div>}
       </div>
       <p className={`mb-3 min-h-6 text-[15px] font-semibold text-faint ${quiz ? 'hidden' : ''}`}>
         {next && <><span className="mr-2.5 font-mono text-[10px] tracking-widest">NEXT</span>{next.text}</>}
@@ -178,8 +189,9 @@ function Summary({ song, onExit }: { song: AnalyzedSong; onExit?: () => void }) 
   const pct = total ? Math.round((clean / total) * 100) : 0;
   const again = () => {
     const pb = usePlayback.getState();
-    pb.set({ ...QUIZ_RESET, restart: true });
-    pb.goTo(0, song.lines.find((l) => l.time != null)?.time ?? null);
+    const memory = useSettings.getState().quizStyle === 'memory'; // no song to restart
+    pb.set({ ...QUIZ_RESET, restart: !memory });
+    pb.goTo(0, memory ? null : song.lines.find((l) => l.time != null)?.time ?? null);
   };
   const study = () => { usePlayback.getState().set({ finished: false }); set({ mode: 'line' }); };
   return (

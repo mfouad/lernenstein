@@ -9,6 +9,7 @@ interface Playback {
   seekTo: number | null; // a pending seek for the player
   solved: Record<number, true>; // quiz lines answered right
   missed: Record<number, true>; // quiz lines that got a wrong pick or went by unanswered
+  hints: Record<number, true>; // quiz lines whose hidden word shows its gloss
   score: number;
   streak: number; // clean answers in a row
   pop: { id: number; points: number; streak: number } | null; // the latest award, for the score animation
@@ -20,7 +21,7 @@ interface Playback {
 }
 
 // A fresh quiz game.
-export const QUIZ_RESET = { solved: {}, missed: {}, score: 0, streak: 0, best: 0, pop: null, finished: false } as const;
+export const QUIZ_RESET = { solved: {}, missed: {}, hints: {}, score: 0, streak: 0, best: 0, pop: null, finished: false } as const;
 
 export const usePlayback = create<Playback>((set) => ({
   active: 0,

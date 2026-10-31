@@ -13,7 +13,8 @@ const ALWAYS_CHIP: Pos[] = ['ADJ', 'X'];
 const GLOSS_LG = ['text-[max(0.75rem,0.34em)]', 'text-[max(1.1rem,0.5em)]', 'text-[max(1.4rem,0.65em)]'];
 const GLOSS_SM = ['text-xs', 'text-base', 'text-xl'];
 
-export function Word({ token, size, blank }: { token: Token; size: 'lg' | 'sm'; blank?: boolean }) {
+// A hidden (quiz) word with `hint` shows just its gloss, in the gloss's place under the gap.
+export function Word({ token, size, blank, hint }: { token: Token; size: 'lg' | 'sm'; blank?: boolean; hint?: boolean }) {
   const s = useSettings();
   const key = wordKey(token.lemma);
   const known = !!s.known[key];
@@ -32,6 +33,7 @@ export function Word({ token, size, blank }: { token: Token; size: 'lg' | 'sm'; 
   // English mode swaps the two lines: the gloss is the main word, the German sits below.
   const en = s.main === 'en';
   const gloss = token.gloss ? shortGloss(token.gloss, token.pos) : '—';
+  const hinted = !!blank && !!hint;
 
   return (
     <span
@@ -43,13 +45,13 @@ export function Word({ token, size, blank }: { token: Token; size: 'lg' | 'sm'; 
           <span className="rounded-full bg-(--c) px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-on">{POS_INFO[token.pos].abbr}</span>
         )}
         <span
-          className={`font-extrabold tracking-tight leading-none ${big ? 'text-(length:--word-size,3.75rem)' : 'text-xl'} ${showColor ? 'text-(--c)' : ''}`}
+          className={`${hinted && en ? '!visible ' : ''}font-extrabold tracking-tight leading-none ${big ? 'text-(length:--word-size,3.75rem)' : 'text-xl'} ${showColor ? 'text-(--c)' : ''}`}
           style={underline ? { textDecorationLine: 'underline', textDecorationStyle: underline as CSSProperties['textDecorationStyle'], textDecorationColor: 'var(--c)', textDecorationThickness: big ? 4 : 2, textUnderlineOffset: big ? 12 : 5 } : undefined}
         >
           {en ? gloss : token.text}
         </span>
-        {!s.hideTranslation && (
-          <span className={`font-semibold ${(big ? GLOSS_LG : GLOSS_SM)[s.glossSize ?? 0]} ${showColor || underline ? 'text-muted' : 'text-en'}`}>{en ? token.text : gloss}</span>
+        {(!s.hideTranslation || hinted) && (
+          <span className={`${hinted && !en ? '!visible ' : ''}font-semibold ${(big ? GLOSS_LG : GLOSS_SM)[s.glossSize ?? 0]} ${showColor || underline ? 'text-muted' : 'text-en'}`}>{en ? token.text : gloss}</span>
         )}
         {blank && <span data-testid="quiz-blank" aria-label="Hidden word" className="!visible absolute inset-x-2 bottom-1 h-1 rounded-full border-b-4 border-dashed border-accent" />}
         {(known || saved) && (

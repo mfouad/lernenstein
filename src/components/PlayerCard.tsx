@@ -31,6 +31,8 @@ export function PlayerCard({ item, song, bare }: { item: LibraryItem; song: Anal
       const t = videoToLine(await p.getCurrentTime(), pts);
       const pb = usePlayback.getState();
       pb.set({ time: t });
+      // Memory quiz: the song doesn't drive the lines, the answers do.
+      if (useSettings.getState().mode === 'quiz' && useSettings.getState().quizStyle === 'memory') return;
       if (!pb.playing) return;
       const lines = song.lines;
       const cur = lines[pb.active];

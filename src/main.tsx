@@ -15,7 +15,7 @@ function Root() {
   const route = useRoute();
   const mobile = useIsMobile(); // phones have the library in the app's own tab bar
   if (route.page === 'studio' && isLocal) return <Suspense fallback={null}><Studio slug={route.slug} /></Suspense>;
-  if (route.page === 'library' && !mobile) return <Suspense fallback={null}><LibraryPage /></Suspense>;
+  if (route.page !== 'play' && !mobile) return <Suspense fallback={null}><LibraryPage /></Suspense>;
   return <App />;
 }
 

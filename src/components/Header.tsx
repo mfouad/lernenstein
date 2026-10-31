@@ -24,7 +24,7 @@ export function Header({ library, item }: { library: LibraryItem[]; item: Librar
         <div className="flex items-center py-1 text-[44px] font-extrabold leading-none tracking-tight">Lernen<span className="text-en">stein</span></div>
         <div className="flex-1" />
         <SongPicker library={library} item={item} />
-        <a href="#/library" className={`${navLink} self-center`}><LayoutGrid size={15} />Library</a>
+        <a href="#/" className={`${navLink} self-center`}><LayoutGrid size={15} />Library</a>
         {isLocal && <a href={studioHref(item.slug)} className={`${navLink} self-center`} title="Edit this entry in the Studio"><Pencil size={15} />Edit</a>}
       </div>
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-5 gap-y-3 px-4 pb-3.5 md:px-7">

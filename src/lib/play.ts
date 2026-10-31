@@ -7,5 +7,5 @@ export function playInApp(i: LibraryItem) {
   if (i.source === 'link') { if (i.lyricsUrl) window.open(i.lyricsUrl, '_blank', 'noopener'); return; }
   useSettings.getState().set({ slug: i.slug });
   usePlayback.getState().set({ active: 0, pass: 0, seekTo: null, ...QUIZ_RESET, time: 0, playing: false });
-  location.hash = '#/';
+  location.hash = '#/play';
 }

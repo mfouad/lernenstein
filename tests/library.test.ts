@@ -36,7 +36,8 @@ describe('studio helpers', () => {
 describe('routes', () => {
   it('parses hash routes', async () => {
     const { parseRoute, studioHref } = await import('../src/lib/route.ts');
-    expect(parseRoute('')).toEqual({ page: 'app' });
+    expect(parseRoute('')).toEqual({ page: 'library' });
+    expect(parseRoute('#/play')).toEqual({ page: 'play' });
     expect(parseRoute('#/library')).toEqual({ page: 'library' });
     expect(parseRoute('#/studio')).toEqual({ page: 'studio', slug: undefined });
     expect(parseRoute(studioHref('a b'))).toEqual({ page: 'studio', slug: 'a b' });

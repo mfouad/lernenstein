@@ -11,13 +11,13 @@ const EM = { fontSize: 'var(--word-size, 3.75rem)' };
 // (subject outlined, verb filled) and a line runs under the sentence from the
 // verb to its partner at the end (the verb bracket). Used by both views.
 // The large size scales with --word-size: spacing is in em of that size.
-export function ChunkStrip({ tokens, size, blank, center }: { tokens: Token[]; size: Size; blank?: Token; center?: boolean }) {
+export function ChunkStrip({ tokens, size, blank, center, hint }: { tokens: Token[]; size: Size; blank?: Token; center?: boolean; hint?: boolean }) {
   const { chunks, hideGrammar, gstyle } = useSettings();
   const big = size === 'lg';
   if (!chunks || hideGrammar || gstyle === 'plain') {
     return (
       <div className={`flex flex-wrap items-start ${center ? 'justify-center' : ''} ${big ? 'gap-x-[0.7em] gap-y-[0.35em]' : 'gap-x-2.5 gap-y-2'}`} style={big ? EM : undefined}>
-        {tokens.map((t, i) => <Word key={i} token={t} size={size} blank={t === blank} />)}
+        {tokens.map((t, i) => <Word key={i} token={t} size={size} blank={t === blank} hint={hint} />)}
       </div>
     );
   }
@@ -25,13 +25,13 @@ export function ChunkStrip({ tokens, size, blank, center }: { tokens: Token[]; s
   return (
     <div className={`flex flex-wrap items-end ${center ? 'justify-center' : ''} ${big ? 'gap-y-[0.3em]' : 'gap-y-2'}`} style={big ? EM : undefined}>
       {clauseIds.map((cid, ci) => chunkClause(tokens.filter((t) => t.clause === cid)).map((c, k) => (
-        <ChunkView key={`${cid}-${k}`} chunk={c} size={size} blank={blank} gapBefore={ci > 0 && k === 0} />
+        <ChunkView key={`${cid}-${k}`} chunk={c} size={size} blank={blank} hint={hint} gapBefore={ci > 0 && k === 0} />
       )))}
     </div>
   );
 }
 
-function ChunkView({ chunk, size, blank, gapBefore }: { chunk: Chunk; size: Size; blank?: Token; gapBefore: boolean }) {
+function ChunkView({ chunk, size, blank, hint, gapBefore }: { chunk: Chunk; size: Size; blank?: Token; hint?: boolean; gapBefore: boolean }) {
   const { kind, bracket } = chunk;
   const big = size === 'lg';
   const pad = big ? 'rounded-2xl border-2 px-[0.3em] py-[0.15em]' : 'rounded-lg border px-2 py-1';
@@ -43,7 +43,7 @@ function ChunkView({ chunk, size, blank, gapBefore }: { chunk: Chunk; size: Size
   return (
     <div className={`relative ${big ? 'px-[0.12em] pb-[max(1rem,0.4em)]' : 'px-1 pb-3'} ${gapBefore ? (big ? 'ml-[0.6em]' : 'ml-5') : ''}`}>
       <div className={`flex flex-wrap ${big ? 'gap-x-[0.45em] gap-y-[0.25em]' : 'gap-x-2.5'} ${box}`}>
-        {chunk.tokens.map((t, i) => <Word key={i} token={t} size={size} blank={t === blank} />)}
+        {chunk.tokens.map((t, i) => <Word key={i} token={t} size={size} blank={t === blank} hint={hint} />)}
       </div>
       {bracket && <Bracket part={bracket} big={big} />}
     </div>

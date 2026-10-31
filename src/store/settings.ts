@@ -5,7 +5,9 @@ import type { SyncPoint } from '../lib/sync.ts';
 import type { FormKey, Pos } from '../types.ts';
 
 export type Mode = 'line' | 'table' | 'quiz';
-export type QuizStyle = 'flow' | 'retry'; // flow: the song never stops; retry: a missed line plays again
+// flow: the song never stops; retry: a missed line plays again; memory: no
+// song, you go line by line and fill the words from memory
+export type QuizStyle = 'flow' | 'retry' | 'memory';
 export type MainLang = 'de' | 'en';
 export type GrammarStyle = 'plain' | 'color' | 'underline' | 'chips';
 export type View = 'all' | 'new' | 'known' | 'nv';
