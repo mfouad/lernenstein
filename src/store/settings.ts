@@ -5,6 +5,7 @@ import type { SyncPoint } from '../lib/sync.ts';
 import type { FormKey, Pos } from '../types.ts';
 
 export type Mode = 'line' | 'table' | 'quiz';
+export type QuizStyle = 'flow' | 'retry'; // flow: the song never stops; retry: a missed line plays again
 export type MainLang = 'de' | 'en';
 export type GrammarStyle = 'plain' | 'color' | 'underline' | 'chips';
 export type View = 'all' | 'new' | 'known' | 'nv';
@@ -23,6 +24,7 @@ interface State {
   slug: string;
   theme: Theme;
   mode: Mode;
+  quizStyle: QuizStyle;
   gstyle: GrammarStyle;
   main: MainLang; // which language is large in the full line view
   chunks: boolean; // group words into chunks with the verb bracket
@@ -49,6 +51,7 @@ export const useSettings = create<State>()(
       slug: 'die-gedanken-sind-frei',
       theme: 'dark',
       mode: 'line',
+      quizStyle: 'retry',
       gstyle: 'color',
       main: 'de',
       chunks: true,

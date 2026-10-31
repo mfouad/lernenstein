@@ -8,7 +8,9 @@ import { useSettings } from '../store/settings.ts';
 import type { AnalyzedSong, LibraryItem } from '../types.ts';
 import { fmt } from './FullLine.tsx';
 
-export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSong | undefined }) {
+// `bare` (phone play mode) is just the video, full width, with YouTube's own
+// controls: everything else follows the saved settings.
+export function PlayerCard({ item, song, bare }: { item: LibraryItem; song: AnalyzedSong | undefined; bare?: boolean }) {
   const player = useRef<YouTubePlayer | null>(null);
   const { repeat, speed, pause, mode, set } = useSettings();
   // Points saved on this device win over the ones shipped with the library.
@@ -34,9 +36,10 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       const cur = lines[pb.active];
       const nextTime = lines[pb.active + 1]?.time;
       const quiz = useSettings.getState().mode === 'quiz';
+      const retry = useSettings.getState().quizStyle === 'retry';
       const reps = quiz ? 0 : useSettings.getState().repeat; // quiz mode has no repeat
       // Quiz: a line that ends with its word not picked plays again, after the pause.
-      if (quiz && cur?.time != null && nextTime != null && t >= nextTime - 0.05 && t < nextTime + 1.5
+      if (quiz && retry && cur?.time != null && nextTime != null && t >= nextTime - 0.05 && t < nextTime + 1.5
         && buildQuiz(song)[pb.active] && !pb.solved[pb.active]) {
         if (Date.now() - replayAt.current < 1000) return; // the seek hasn't shown up in the time yet
         replayAt.current = Date.now();
@@ -66,7 +69,13 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
       }
       let idx = 0;
       lines.forEach((l, i) => { if (l.time != null && l.time <= t + 0.1) idx = i; });
-      if (idx !== pb.active) pb.set({ active: idx, pass: 0 });
+      if (idx !== pb.active) {
+        // Flow: a line that goes by unanswered breaks the streak.
+        if (quiz && !retry && idx === pb.active + 1 && buildQuiz(song)[pb.active] && !pb.solved[pb.active]) {
+          pb.set({ streak: 0, missed: { ...pb.missed, [pb.active]: true } });
+        }
+        pb.set({ active: idx, pass: 0 });
+      }
     }, 200);
     return () => { clearInterval(id); clearTimeout(resume.current); };
   }, [song, synced, item.slug, item.sync]);
@@ -75,7 +84,8 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
   useEffect(() => {
     if (seekTo == null) return;
     player.current?.seekTo(lineToVideo(seekTo, useSettings.getState().syncs[item.slug] ?? item.sync ?? NO_POINTS), true);
-    usePlayback.getState().set({ seekTo: null });
+    if (usePlayback.getState().restart) player.current?.playVideo();
+    usePlayback.getState().set({ seekTo: null, restart: false });
   }, [seekTo, item.slug, item.sync]);
 
   useEffect(() => { player.current?.setPlaybackRate(speed); }, [speed]);
@@ -112,23 +122,32 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
   };
   const toggle = () => (playing ? player.current?.pauseVideo() : player.current?.playVideo());
 
-  return (
-    <section className="rounded-2xl border border-line bg-surface p-3.5">
-      {/* The player stays visible and uncovered (YouTube terms, CLAUDE.md). */}
-      <div className="h-[220px] overflow-hidden rounded-xl bg-black">
+  const video = (
+    // The player stays visible and uncovered (YouTube terms, CLAUDE.md): at least
+    // 200px tall, even where 20% of the screen would be less.
+    <div className={`overflow-hidden bg-black ${bare ? 'h-[max(20dvh,200px)] w-full' : 'h-[220px] rounded-xl'}`}>
         {item.youtubeId ? (
           <YouTube
             videoId={item.youtubeId}
             className="size-full"
             iframeClassName="size-full"
-            opts={{ playerVars: { playsinline: 1, rel: 0 } }}
+            opts={{ playerVars: bare ? { playsinline: 1, rel: 0, fs: 0, disablekb: 1, iv_load_policy: 3 } : { playsinline: 1, rel: 0 } }}
             onReady={(e: YouTubeEvent) => { player.current = e.target; e.target.setPlaybackRate(useSettings.getState().speed); }}
-            onStateChange={(e: YouTubeEvent<number>) => usePlayback.getState().set({ playing: e.data === 1 })}
+            onStateChange={(e: YouTubeEvent<number>) => {
+              const pb = usePlayback.getState();
+              pb.set({ playing: e.data === 1, ...(e.data === 0 && useSettings.getState().mode === 'quiz' ? { finished: true } : {}) });
+            }}
           />
         ) : (
           <div className="grid size-full place-items-center p-6 text-center text-sm text-[#c9d1df]">No video for this item yet.</div>
         )}
-      </div>
+    </div>
+  );
+  if (bare) return video;
+
+  return (
+    <section className="rounded-2xl border border-line bg-surface p-3.5">
+      {video}
       <div className="mt-3 flex items-center justify-center gap-2">
         <IconButton label="Previous line" onClick={() => step(-1)}><SkipBack size={15} fill="currentColor" /></IconButton>
         <button type="button" aria-label={playing ? 'Pause' : 'Play'} onClick={toggle} disabled={!item.youtubeId}
@@ -138,6 +157,7 @@ export function PlayerCard({ item, song }: { item: LibraryItem; song: AnalyzedSo
         <IconButton label="Next line" onClick={() => step(1)}><SkipForward size={15} fill="currentColor" /></IconButton>
         <span className="ml-1 font-mono text-xs text-muted">{synced ? fmt(time) : 'untimed'}</span>
       </div>
+      <p className="mb-0 mt-2 text-center text-xs text-faint">Press <kbd className="rounded border border-line2 bg-surface2 px-1.5 font-mono text-[11px]">Space</kbd> to pause or play</p>
       <div className="mt-3 grid gap-2.5">
         <OptionRow label="Repeat">
           <Options value={mode === 'quiz' ? 0 : repeat} options={[[0, 'Off'], [1, '1×'], [2, '2×'], [3, '3×']]} onChange={(v) => set({ repeat: v })} aria="Repeat each line" disabled={mode === 'quiz'} />

@@ -275,6 +275,50 @@
       "genre": "Indie / Singer-Songwriter",
       "level": "Beginner / Intermediate",
       "why_it_works": "Slow and sparse, with plain spoken-German phrasing and lots of repetition."
+    },
+    {
+      "slug": "new-song-1",
+      "title": "Untitled",
+      "artist": "",
+      "youtubeId": null,
+      "lyricsUrl": null,
+      "source": "lrclib",
+      "rights": "copyrighted",
+      "level": "Beginner",
+      "why_it_works": ""
+    },
+    {
+      "slug": "new-song-2",
+      "title": "Mama hat gesagt",
+      "artist": "SDP x Sido x Esther Graf",
+      "youtubeId": "31rzVpAXQC0",
+      "lyricsUrl": "https://lrclib.net/api/get/31212150",
+      "source": "lrclib",
+      "rights": "copyrighted",
+      "level": "Beginner",
+      "why_it_works": ""
+    },
+    {
+      "slug": "verwandtschaftstreffen",
+      "title": "Verwandtschaftstreffen",
+      "artist": "RIAN",
+      "youtubeId": "r7XJ6FFPxx0",
+      "lyricsUrl": "https://lrclib.net/api/get/11905603",
+      "source": "lrclib",
+      "rights": "copyrighted",
+      "level": "Beginner",
+      "why_it_works": ""
+    },
+    {
+      "slug": "spongebob-schwammkopf ",
+      "title": "SpongeBob Schwammkopf Titelsong",
+      "artist": "SpongeBob Schwammkopf ",
+      "youtubeId": "SoMv3UXdgeA",
+      "lyricsUrl": "https://lrclib.net/api/get/14183617",
+      "source": "lrclib",
+      "rights": "copyrighted",
+      "level": "Beginner",
+      "why_it_works": ""
     }
   ],
   "poems": [

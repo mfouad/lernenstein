@@ -4,7 +4,9 @@ import { Header } from './components/Header.tsx';
 import { LyricsTable } from './components/LyricsTable.tsx';
 import { PlayerCard } from './components/PlayerCard.tsx';
 import { MyWordsCard, ShowCard } from './components/Sidebar.tsx';
+import { useIsMobile } from './hooks/useIsMobile.ts';
 import { useSong } from './hooks/useSong.ts';
+import { MobileLayout } from './mobile/MobileLayout.tsx';
 import { persistStorage } from './sources/db.ts';
 import { currentLibrary } from './studio/draft.ts';
 import { usePlayback } from './store/playback.ts';
@@ -16,6 +18,7 @@ export default function App() {
   const item = library.find((i) => i.slug === slug && i.source !== 'link') ?? library[0];
   const { analysis, loading, failed } = useSong(item);
   const song = analysis.data;
+  const mobile = useIsMobile();
 
   useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark'); }, [theme]);
   useEffect(() => { persistStorage(); }, []);
@@ -32,6 +35,8 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [song]);
+
+  if (mobile) return <MobileLayout library={library} item={item} song={song} loading={loading} failed={failed} />;
 
   return (
     <div className="min-h-screen bg-bg text-ink">

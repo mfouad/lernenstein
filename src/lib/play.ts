@@ -1,4 +1,4 @@
-import { usePlayback } from '../store/playback.ts';
+import { QUIZ_RESET, usePlayback } from '../store/playback.ts';
 import { useSettings } from '../store/settings.ts';
 import type { LibraryItem } from '../types.ts';
 
@@ -6,6 +6,6 @@ import type { LibraryItem } from '../types.ts';
 export function playInApp(i: LibraryItem) {
   if (i.source === 'link') { if (i.lyricsUrl) window.open(i.lyricsUrl, '_blank', 'noopener'); return; }
   useSettings.getState().set({ slug: i.slug });
-  usePlayback.getState().set({ active: 0, pass: 0, seekTo: null, solved: {}, time: 0, playing: false });
+  usePlayback.getState().set({ active: 0, pass: 0, seekTo: null, ...QUIZ_RESET, time: 0, playing: false });
   location.hash = '#/';
 }

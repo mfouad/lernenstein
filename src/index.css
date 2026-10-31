@@ -22,6 +22,14 @@
   --slot-0: #A3ACBD; --slot-1: #4FD1C5; --slot-2: #FF9A5C; --slot-3: #9AA6FF; --slot-4: #FF9A5C; --slot-5: #C58CFF;
 }
 
+/* Digits only: Fredoka's rounded numerals, in every font stack below. */
+@font-face { font-family: 'Digits'; font-weight: 500; font-display: swap; unicode-range: U+0030-0039;
+  src: url(https://fonts.gstatic.com/s/fredoka/v17/X7nP4b87HvSqjb_WIi2yDCRwoQ_k7367_B-i2yQag0-mac3OwyLMFg.ttf) format('truetype'); }
+@font-face { font-family: 'Digits'; font-weight: 600; font-display: swap; unicode-range: U+0030-0039;
+  src: url(https://fonts.gstatic.com/s/fredoka/v17/X7nP4b87HvSqjb_WIi2yDCRwoQ_k7367_B-i2yQag0-mac3OLyXMFg.ttf) format('truetype'); }
+@font-face { font-family: 'Digits'; font-weight: 700; font-display: swap; unicode-range: U+0030-0039;
+  src: url(https://fonts.gstatic.com/s/fredoka/v17/X7nP4b87HvSqjb_WIi2yDCRwoQ_k7367_B-i2yQag0-mac3OFiXMFg.ttf) format('truetype'); }
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -35,18 +43,35 @@
   --color-en: var(--en);
   --color-good: var(--good);
   --color-on: var(--on);
-  --font-sans: Inter, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: Digits, Inter, system-ui, sans-serif;
+  --font-mono: Digits, 'JetBrains Mono', ui-monospace, monospace;
 }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Digits, Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 .eyebrow {
   font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+}
+
+/* Quiz score: the badge bounces on a right answer and the points float up. */
+@keyframes score-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); box-shadow: 0 0 18px var(--accent); }
+  100% { transform: scale(1); }
+}
+@keyframes score-float {
+  0% { opacity: 0; transform: translateY(8px) scale(0.8); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-30px) scale(1.2); }
+}
+.score-pop { animation: score-pop 0.5s ease-out; }
+.score-float { animation: score-float 1s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .score-pop, .score-float { animation: none; }
 }
